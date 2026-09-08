@@ -1,0 +1,49 @@
+# Кореневий .gitignore монорепо. Доповнює per-service .gitignore,
+# які прикривають лише target/ у своїх теках.
+
+# --- Секрети. Найважливіший блок. ---
+# Ключі й токени в git не потрапляють НІКОЛИ.
+.env
+.env.local
+.env.*.local
+*.pem
+*.p12
+*.jks
+infra/keys/
+**/application-local.yml
+**/application-local.yaml
+**/application-secret*.yml
+**/application-secret*.properties
+
+# --- Maven (дубль до per-service, на випадок файлів у корені) ---
+target/
+
+# --- IDE ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- Angular ---
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/**/.angular/
+frontend/**/.env
+
+# --- Terraform (з'явиться на 4-му місяці) ---
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# --- Інше ---
+*.log
+logs/
+.DS_Store
+Thumbs.db
