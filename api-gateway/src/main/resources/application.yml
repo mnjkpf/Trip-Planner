@@ -1,0 +1,57 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Єдина точка входу. Роути проксі-проходять ПОВНИЙ шлях /api/**
+  # (StripPrefix не потрібен — downstream-контролери мапляться на /api/...).
+  # Префікс саме spring.cloud.gateway.server.webflux.* — це SCG 5.x на Boot 4;
+  # старий spring.cloud.gateway.routes у цій версії тихо не біндиться.
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-service
+              uri: ${SVC_USER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/user/**,/api/wishlist/**,/.well-known/jwks.json
+            - id: place-service
+              uri: ${SVC_PLACE_URI:http://localhost:8082}
+              predicates:
+                - Path=/api/places/**
+            - id: trip-service
+              uri: ${SVC_TRIP_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/trips/**
+            - id: context-service
+              uri: ${SVC_CONTEXT_URI:http://localhost:8084}
+              predicates:
+                - Path=/api/context/**
+
+  # Gateway = OAuth2 resource server. Валідує RS256-токени від user-service
+  # по публічних ключах з JWKS (kid travel-planner-key). Ключі не тримаємо тут.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# OTel-старт є в classpath, але колектор ще не піднято (окремий крок Observability).
+# Поки вимикаємо SDK за замовчуванням, щоб не спамити помилками експорту.
+otel:
+  sdk:
+    disabled: ${OTEL_SDK_DISABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
