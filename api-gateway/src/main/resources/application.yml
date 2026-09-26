@@ -26,7 +26,7 @@ spring:
             - id: user-service
               uri: ${SVC_USER_URI:http://localhost:8081}
               predicates:
-                - Path=/api/auth/**,/api/user/**,/api/wishlist/**,/.well-known/jwks.json
+                - Path=/api/auth/**,/api/user/**,/.well-known/jwks.json
             - id: place-service
               uri: ${SVC_PLACE_URI:http://localhost:8082}
               predicates:
@@ -34,7 +34,7 @@ spring:
             - id: trip-service
               uri: ${SVC_TRIP_URI:http://localhost:8083}
               predicates:
-                - Path=/api/trips/**
+                - Path=/api/trips/**,/api/wishlist/**
             - id: context-service
               uri: ${SVC_CONTEXT_URI:http://localhost:8084}
               predicates:
