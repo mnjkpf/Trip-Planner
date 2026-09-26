@@ -13,6 +13,15 @@ spring:
     gateway:
       server:
         webflux:
+          # Rate-limiting через Redis (token bucket): 5 запитів/с, сплеск до 10.
+          # Ключ — користувач (JWT sub) або IP для анонімних. Перевищення -> 429.
+          default-filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
           routes:
             - id: user-service
               uri: ${SVC_USER_URI:http://localhost:8081}
