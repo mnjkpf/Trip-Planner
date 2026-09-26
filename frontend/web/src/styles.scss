@@ -180,3 +180,30 @@ input:focus { outline: 2px solid rgba(37, 99, 235, 0.35); border-color: var(--br
 }
 .pname { font-weight: 500; }
 .cat { font-size: 12px; color: var(--muted); background: #eef1f5; padding: 2px 8px; border-radius: 999px; }
+
+/* nav */
+.nav { display: flex; align-items: center; gap: 18px; }
+.nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
+.nav a.active { color: var(--brand); }
+
+/* select — під стиль input */
+select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+}
+
+/* place search */
+.controls { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.controls label { font-size: 13px; }
+.controls select, .controls input { min-width: 140px; }
+.map { height: 440px; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--line); }
+.places-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.place-card { cursor: pointer; transition: box-shadow 0.15s; }
+.place-card:hover { box-shadow: 0 4px 14px rgba(16, 24, 40, 0.1); }
+.place-card .addr { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.place-card .site { font-size: 13px; color: var(--brand); text-decoration: none; display: inline-block; margin-top: 6px; }
+.cat-badge { background: #e0e7ff; color: #3730a3; }

@@ -71,3 +71,17 @@ export interface TravelContext {
   climateHint: string;
   days: WeatherDay[];
 }
+
+export interface Place {
+  id: string;
+  name: string;
+  category: string;
+  description: string | null;
+  lat: number;
+  lon: number;
+  city: string | null;
+  countryCode: string | null;
+  address: string | null;
+  imageUrl: string | null;
+  website: string | null;
+}

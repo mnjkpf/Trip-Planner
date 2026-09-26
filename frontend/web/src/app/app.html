@@ -1,7 +1,11 @@
 <header class="topbar">
   <a class="brand" routerLink="/trips">✈ Trip Planner</a>
   @if (auth.isLoggedIn()) {
-    <button class="link" (click)="logout()">Вийти</button>
+    <nav class="nav">
+      <a routerLink="/trips" routerLinkActive="active">Подорожі</a>
+      <a routerLink="/places" routerLinkActive="active">Місця</a>
+      <button class="link" (click)="logout()">Вийти</button>
+    </nav>
   }
 </header>
 
