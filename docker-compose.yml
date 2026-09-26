@@ -2,20 +2,23 @@
 #
 # Два режими:
 #
-#   1) Розробка з IDE — тільки інфраструктура (як було раніше):
+#   1) Розробка з IDE — тільки інфраструктура:
 #        docker compose up -d
-#      Сервіси запускаєш з IDE; вони йдуть на localhost:5432 / localhost:6379 / localhost:29092.
 #
 #   2) Повний стек у контейнерах — уся система однією командою:
 #        docker compose --profile full up -d --build
-#      Піднімає інфраструктуру + 6 сервісів. Потрібен BuildKit (типово увімкнений у Docker Desktop).
+#      Піднімає інфраструктуру + 6 сервісів + LGTM (спостережуваність).
+#      Зміну лише env (без правок коду) достатньо застосувати без --build:
+#        docker compose --profile full up -d
 #
 #   docker compose --profile full down       # зупинити, дані лишаються
 #   docker compose --profile full down -v    # знести разом з даними (томи)
 #
 # Порти на хості: gateway 8080, user 8081, place 8082, trip 8083, context 8084,
-#                 kafka-ui 8085, planner 8086, kafka 29092, postgres 5432, redis 6379.
-# Точка входу для клієнта — тільки gateway (8080). Решта відкриті для зручності налагодження.
+#                 kafka-ui 8085, planner 8086, Grafana 3000, kafka 29092, postgres 5432, redis 6379.
+#
+# Спостережуваність: усі сервіси шлють трейси й метрики по OTLP у LGTM (Tempo+Prometheus+Grafana).
+# Трейс-контекст пропагується через HTTP (RestClient) і Kafka (observation-enabled).
 
 name: travel-planner
 
@@ -28,8 +31,6 @@ services:
       POSTGRES_USER: tp
       POSTGRES_PASSWORD: tp
       POSTGRES_DB: postgres
-      # Кожен сервіс отримує ВЛАСНУ базу — один інстанс, але межі
-      # даних такі самі, як були б у проді з окремими серверами.
       TP_DATABASES: userdb,placedb,tripdb,contextdb
     ports:
       - "5432:5432"
@@ -57,7 +58,6 @@ services:
       retries: 10
 
   kafka:
-    # KRaft — без ZooKeeper. Один брокер, він же контролер.
     image: apache/kafka:4.0.0
     container_name: tp-kafka
     ports:
@@ -68,7 +68,6 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
-      # kafka:9092 — для контейнерів, localhost:29092 — для застосунків з IDE
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -89,8 +88,6 @@ services:
       start_period: 20s
 
   kafka-ui:
-    # Не обов'язково, але дуже допомагає бачити, що реально
-    # лягло в топік, коли налагоджуєш outbox.
     image: kafbat/kafka-ui:latest
     container_name: tp-kafka-ui
     depends_on:
@@ -104,9 +101,25 @@ services:
       DYNAMIC_CONFIG_ENABLED: "true"
 
   # =====================================================================
-  #  Застосунки. Тільки у профілі "full", щоб `docker compose up -d`
-  #  (без профілю) лишався IDE-режимом і піднімав саму інфраструктуру.
-  #  Образ будується з multi-stage Dockerfile у теці сервісу.
+  #  Спостережуваність: grafana/otel-lgtm — OTel Collector + Tempo (трейси)
+  #  + Prometheus (метрики) + Loki (логи) + Grafana (UI) в одному контейнері.
+  #  Grafana: http://localhost:3000 (anonymous, роль Admin увімкнено в образі).
+  # =====================================================================
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: tp-lgtm
+    profiles: ["full"]
+    ports:
+      - "3000:3000"     # Grafana UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    volumes:
+      - lgtmdata:/data
+
+  # =====================================================================
+  #  Застосунки (профіль full). Трейсинг/метрики вмикаються через
+  #  SPRING_APPLICATION_JSON (точні імена property, без relaxed-binding).
   # =====================================================================
 
   user-service:
@@ -119,12 +132,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: tp
       POSTGRES_PASSWORD: tp
-      # Приватний ключ підписує токени, публічний віддається в JWKS.
-      # Монтуємо тільки читання; у git ключі не потрапляють (.gitignore).
       JWT_PRIVATE_KEY_LOCATION: file:/app/infra/keys/jwt-private.pem
       JWT_PUBLIC_KEY_LOCATION: file:/app/infra/keys/jwt-public.pem
     volumes:
@@ -146,6 +158,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: tp
@@ -153,7 +166,6 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # GEOAPIFY_API_KEY: ""   # опційно; без ключа провайдер деградує до порожнього результату
     ports:
       - "8082:8082"
 
@@ -171,6 +183,7 @@ services:
       place-service:
         condition: service_started
     environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: tp
@@ -194,6 +207,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: tp
@@ -220,6 +234,7 @@ services:
       context-service:
         condition: service_started
     environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -244,6 +259,8 @@ services:
       context-service:
         condition: service_started
     environment:
+      SPRING_APPLICATION_JSON: '{"management.opentelemetry.enabled":true,"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
+      OTEL_SDK_DISABLED: "false"
       SVC_USER_URI: http://user-service:8081
       SVC_PLACE_URI: http://place-service:8082
       SVC_TRIP_URI: http://trip-service:8083
@@ -258,3 +275,4 @@ volumes:
   pgdata:
   redisdata:
   kafkadata:
+  lgtmdata:
