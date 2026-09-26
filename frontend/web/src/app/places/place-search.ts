@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import * as L from 'leaflet';
 import { PlaceService } from '../core/place.service';
 import { Place } from '../core/models';
@@ -36,7 +37,7 @@ import { Place } from '../core/models';
     } @else {
       <div class="grid places-grid">
         @for (p of results(); track p.id) {
-          <div class="card place-card" (click)="focus(p)">
+          <div class="card place-card" (click)="open(p)">
             <span class="badge cat-badge">{{ label(p.category) }}</span>
             <h3>{{ p.name }}</h3>
             @if (p.description) { <p class="muted">{{ p.description }}</p> }
@@ -52,6 +53,7 @@ import { Place } from '../core/models';
 })
 export class PlaceSearch implements AfterViewInit, OnDestroy {
   private places = inject(PlaceService);
+  private router = inject(Router);
   private mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
   private map!: L.Map;
   private markers = L.layerGroup();
@@ -126,8 +128,8 @@ export class PlaceSearch implements AfterViewInit, OnDestroy {
     }
   }
 
-  focus(p: Place): void {
-    this.map.setView([p.lat, p.lon], 16);
+  open(p: Place): void {
+    this.router.navigate(['/places', p.id]);
   }
 
   private escape(s: string): string {

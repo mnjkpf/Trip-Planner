@@ -207,3 +207,13 @@ select {
 .place-card .addr { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
 .place-card .site { font-size: 13px; color: var(--brand); text-decoration: none; display: inline-block; margin-top: 6px; }
 .cat-badge { background: #e0e7ff; color: #3730a3; }
+
+/* place detail */
+.place-detail .lead { font-size: 15px; margin: 10px 0 14px; }
+.place-detail .hero { width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; margin: 10px 0; }
+.facts { display: grid; gap: 10px; margin: 8px 0 0; }
+.facts > div { display: grid; grid-template-columns: 120px 1fr; gap: 10px; }
+.facts dt { color: var(--muted); font-size: 13px; margin: 0; }
+.facts dd { margin: 0; }
+.facts a { color: var(--brand); text-decoration: none; word-break: break-all; }
+.map-sm { height: 300px; margin-top: 16px; }
