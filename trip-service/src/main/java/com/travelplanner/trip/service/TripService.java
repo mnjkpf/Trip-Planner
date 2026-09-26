@@ -1,5 +1,9 @@
 package com.travelplanner.trip.service;
 
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.Tracer;
+import org.springframework.beans.factory.ObjectProvider;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 import com.travelplanner.trip.domain.OutboxEvent;
@@ -39,6 +43,7 @@ public class TripService {
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
     private final PlanEvents planEvents;
+    private final ObjectProvider<Tracer> tracerProvider;
     private final JsonMapper jsonMapper;
 
     public TripService(TripRepository tripRepository,
@@ -47,6 +52,7 @@ public class TripService {
                        TripDayRepository tripDayRepository,
                        ItineraryItemRepository itineraryItemRepository,
                        PlanEvents planEvents,
+                       ObjectProvider<Tracer> tracerProvider,
                        JsonMapper jsonMapper) {
         this.tripRepository = tripRepository;
         this.planJobRepository = planJobRepository;
@@ -54,6 +60,7 @@ public class TripService {
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
         this.planEvents = planEvents;
+        this.tracerProvider = tracerProvider;
         this.jsonMapper = jsonMapper;
     }
 
@@ -140,6 +147,7 @@ public class TripService {
                 .aggregateId(tripId)
                 .eventType("trip.plan.requested")
                 .payload(toJson(buildPlanPayload(job, trip, userId)))
+                .headers(traceHeaders())
                 .attempts(0)
                 .build();
         outboxRepository.save(event);
@@ -200,6 +208,25 @@ public class TripService {
         payload.put("startDate", trip.getStartDate().toString());
         payload.put("endDate", trip.getEndDate().toString());
         return payload;
+    }
+
+    /**
+     * Знімок поточного trace-контексту (W3C traceparent). Кладемо в outbox.headers,
+     * щоб OutboxPublisher відновив його при публікації — тоді HTTP-запит /plan і вся
+     * async-петля (planner -> context/place -> trip) будуть ОДНИМ трейсом.
+     */
+    private String traceHeaders() {
+        Tracer tracer = tracerProvider.getIfAvailable();
+        if (tracer == null) {
+            return null;
+        }
+        Span span = tracer.currentSpan();
+        if (span == null) {
+            return null;
+        }
+        TraceContext ctx = span.context();
+        String traceparent = "00-" + ctx.traceId() + "-" + ctx.spanId() + "-01";
+        return toJson(Map.of("traceparent", traceparent));
     }
 
     private String toJson(Object value) {
