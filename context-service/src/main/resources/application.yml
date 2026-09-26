@@ -1,0 +1,48 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: context-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/contextdb
+    username: ${POSTGRES_USER:tp}
+    password: ${POSTGRES_PASSWORD:tp}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  # Кешу-таблицю погоди додамо окремим кроком; поки міграцій нема — Flyway вимкнено.
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+
+app:
+  providers:
+    open-meteo:
+      # Безкоштовний, без API-ключа. Прогноз ~16 днів наперед; далі — деградуємо до сезону.
+      base-url: ${OPEN_METEO_BASE_URL:https://api.open-meteo.com/v1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

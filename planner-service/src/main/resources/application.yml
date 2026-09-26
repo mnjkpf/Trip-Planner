@@ -31,6 +31,7 @@ spring:
 app:
   services:
     place-uri: ${SVC_PLACE_URI:http://localhost:8082}
+    context-uri: ${SVC_CONTEXT_URI:http://localhost:8084}
   topics:
     plan-requested: trip.plan.requested
     plan-completed: trip.plan.completed
