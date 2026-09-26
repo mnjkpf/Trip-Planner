@@ -8,11 +8,14 @@ import com.travelplanner.trip.domain.PlanJobStatus;
 import com.travelplanner.trip.domain.Trip;
 import com.travelplanner.trip.domain.TripStatus;
 import com.travelplanner.trip.dto.CreateTripRequest;
+import com.travelplanner.trip.dto.ItineraryResponse;
 import com.travelplanner.trip.dto.PlanJobResponse;
 import com.travelplanner.trip.dto.TripResponse;
 import com.travelplanner.trip.error.ApiExceptions.TripNotFoundException;
+import com.travelplanner.trip.repository.ItineraryItemRepository;
 import com.travelplanner.trip.repository.OutboxRepository;
 import com.travelplanner.trip.repository.PlanJobRepository;
+import com.travelplanner.trip.repository.TripDayRepository;
 import com.travelplanner.trip.repository.TripRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,15 +32,21 @@ public class TripService {
     private final TripRepository tripRepository;
     private final PlanJobRepository planJobRepository;
     private final OutboxRepository outboxRepository;
+    private final TripDayRepository tripDayRepository;
+    private final ItineraryItemRepository itineraryItemRepository;
     private final JsonMapper jsonMapper;
 
     public TripService(TripRepository tripRepository,
                        PlanJobRepository planJobRepository,
                        OutboxRepository outboxRepository,
+                       TripDayRepository tripDayRepository,
+                       ItineraryItemRepository itineraryItemRepository,
                        JsonMapper jsonMapper) {
         this.tripRepository = tripRepository;
         this.planJobRepository = planJobRepository;
         this.outboxRepository = outboxRepository;
+        this.tripDayRepository = tripDayRepository;
+        this.itineraryItemRepository = itineraryItemRepository;
         this.jsonMapper = jsonMapper;
     }
 
@@ -68,6 +77,30 @@ public class TripService {
     @Transactional(readOnly = true)
     public TripResponse get(UUID userId, UUID tripId) {
         return toResponse(requireOwned(userId, tripId));
+    }
+
+    /**
+     * Готовий маршрут: дні по порядку, у кожному — пункти по порядку.
+     * Перевірка власника — через requireOwned, щоб не віддати чужий маршрут.
+     */
+    @Transactional(readOnly = true)
+    public ItineraryResponse itinerary(UUID userId, UUID tripId) {
+        Trip trip = requireOwned(userId, tripId);
+        List<ItineraryResponse.Day> days = tripDayRepository.findByTripIdOrderByDayIndexAsc(tripId).stream()
+                .map(d -> new ItineraryResponse.Day(
+                        d.getDayIndex(),
+                        d.getDayDate(),
+                        itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(d.getId()).stream()
+                                .map(i -> new ItineraryResponse.Item(
+                                        i.getOrderIndex(),
+                                        i.getPlaceId(),
+                                        i.getPlaceName(),
+                                        i.getPlaceCategory(),
+                                        i.getPlaceLat(),
+                                        i.getPlaceLon()))
+                                .toList()))
+                .toList();
+        return new ItineraryResponse(tripId, trip.getStatus(), days);
     }
 
     @Transactional

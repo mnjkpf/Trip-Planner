@@ -1,6 +1,7 @@
 package com.travelplanner.trip.web;
 
 import com.travelplanner.trip.dto.CreateTripRequest;
+import com.travelplanner.trip.dto.ItineraryResponse;
 import com.travelplanner.trip.dto.PlanJobResponse;
 import com.travelplanner.trip.dto.TripResponse;
 import com.travelplanner.trip.service.TripService;
@@ -48,6 +49,13 @@ public class TripController {
     public TripResponse get(@RequestHeader("X-User-Id") UUID userId,
                             @PathVariable UUID id) {
         return tripService.get(userId, id);
+    }
+
+    // Готовий маршрут (дні + пункти). Фронт тягне його після статусу PLANNED.
+    @GetMapping("/{id}/itinerary")
+    public ItineraryResponse itinerary(@RequestHeader("X-User-Id") UUID userId,
+                                       @PathVariable UUID id) {
+        return tripService.itinerary(userId, id);
     }
 
     @DeleteMapping("/{id}")
