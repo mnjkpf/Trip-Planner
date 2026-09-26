@@ -6,6 +6,8 @@ import com.travelplanner.place.domain.PlaceExternalRef;
 import com.travelplanner.place.dto.PlaceResponse;
 import com.travelplanner.place.error.ApiExceptions.PlaceNotFoundException;
 import com.travelplanner.place.provider.PlaceCandidate;
+import com.travelplanner.place.provider.PlaceEnricher;
+import com.travelplanner.place.provider.PlaceImage;
 import com.travelplanner.place.provider.PlacesProvider;
 import com.travelplanner.place.repository.PlaceExternalRefRepository;
 import com.travelplanner.place.repository.PlaceRepository;
@@ -30,15 +32,18 @@ public class PlaceService {
     private final PlaceRepository placeRepository;
     private final PlaceExternalRefRepository externalRefRepository;
     private final PlacesProvider placesProvider;
+    private final PlaceEnricher placeEnricher;
     private final GeometryFactory geometryFactory;
 
     public PlaceService(PlaceRepository placeRepository,
                         PlaceExternalRefRepository externalRefRepository,
                         PlacesProvider placesProvider,
+                        PlaceEnricher placeEnricher,
                         GeometryFactory geometryFactory) {
         this.placeRepository = placeRepository;
         this.externalRefRepository = externalRefRepository;
         this.placesProvider = placesProvider;
+        this.placeEnricher = placeEnricher;
         this.geometryFactory = geometryFactory;
     }
 
@@ -107,11 +112,45 @@ public class PlaceService {
         return saved;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Деталі місця. Ліниво збагачуємо фото: якщо його ще немає і ми ще не пробували
+     * (enriched_at == null) — питаємо провайдера деталей і кешуємо результат у БД.
+     * Це @Transactional (не readOnly), бо збагачення пише — так само, як search()
+     * пише щойно знайдені місця. Місце — керована сутність, зміни підуть dirty checking.
+     */
+    @Transactional
     public PlaceResponse getById(UUID id) {
-        return placeRepository.findById(id)
-                .map(this::toResponse)
+        Place p = placeRepository.findById(id)
                 .orElseThrow(() -> new PlaceNotFoundException("Місце не знайдено: " + id));
+        if (p.getImageUrl() == null && p.getEnrichedAt() == null) {
+            enrichImage(p);
+        }
+        return toResponse(p);
+    }
+
+    /**
+     * Одноразова спроба дотягнути фото через провайдера деталей (Wikipedia — за назвою
+     * місця). enriched_at ставимо ЗАВЖДИ (навіть без фото), щоб не смикати провайдера
+     * повторно на кожен перегляд місця без зображення. Помилку ковтаємо.
+     */
+    private void enrichImage(Place p) {
+        if (!placeEnricher.isEnabled()) {
+            return;   // без ключа не позначаємо enriched_at — спробуємо, коли ключ додадуть
+        }
+        try {
+            PlaceImage img = placeEnricher.fetchImage(p.getName());
+            if (img != null) {
+                if (img.imageUrl() != null) {
+                    p.setImageUrl(img.imageUrl());
+                }
+                if (img.wikidataId() != null && p.getWikidataId() == null) {
+                    p.setWikidataId(img.wikidataId());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("збагачення фото не вдалося для {}: {}", p.getId(), e.getMessage());
+        }
+        p.setEnrichedAt(Instant.now());
     }
 
     private PlaceResponse toResponse(Place p) {

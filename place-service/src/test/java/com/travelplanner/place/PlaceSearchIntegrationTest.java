@@ -1,6 +1,7 @@
 package com.travelplanner.place;
 
 import com.travelplanner.place.domain.Place;
+import com.travelplanner.place.provider.PlaceEnricher;
 import com.travelplanner.place.provider.PlacesProvider;
 import com.travelplanner.place.repository.PlaceRepository;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,11 @@ class PlaceSearchIntegrationTest {
     // і не ходять у справжній Geoapify. Незастабований мок повертає порожній список.
     @MockitoBean
     PlacesProvider placesProvider;
+
+    // Збагачувач фото теж замокано — тести не ходять у Wikipedia.
+    // Незастабований мок дає isEnabled()=false, тож getById не запускає збагачення.
+    @MockitoBean
+    PlaceEnricher placeEnricher;
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> asList(String json) {
