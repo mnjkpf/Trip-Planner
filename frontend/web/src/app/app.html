@@ -1,0 +1,10 @@
+<header class="topbar">
+  <a class="brand" routerLink="/trips">✈ Trip Planner</a>
+  @if (auth.isLoggedIn()) {
+    <button class="link" (click)="logout()">Вийти</button>
+  }
+</header>
+
+<main class="content">
+  <router-outlet />
+</main>
