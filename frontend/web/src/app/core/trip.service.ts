@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateTripRequest, Itinerary, PlanJob, TravelContext, Trip } from './models';
+import { CreateTripRequest, Itinerary, PlanJob, TravelContext, Trip, UpdateTripRequest } from './models';
 
 /** Усе ходить через gateway (проксі /api -> :8080). */
 @Injectable({ providedIn: 'root' })
@@ -18,6 +18,14 @@ export class TripService {
 
   create(req: CreateTripRequest): Observable<Trip> {
     return this.http.post<Trip>('/api/trips', req);
+  }
+
+  update(id: string, req: UpdateTripRequest): Observable<Trip> {
+    return this.http.put<Trip>(`/api/trips/${id}`, req);
+  }
+
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/trips/${id}`);
   }
 
   plan(id: string): Observable<PlanJob> {

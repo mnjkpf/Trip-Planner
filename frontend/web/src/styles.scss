@@ -217,3 +217,35 @@ select {
 .facts dd { margin: 0; }
 .facts a { color: var(--brand); text-decoration: none; word-break: break-all; }
 .map-sm { height: 300px; margin-top: 16px; }
+
+/* trip edit note */
+.note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+/* detail head actions (edit / delete) */
+.head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn-sm {
+  display: inline-flex; align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-sm:hover { border-color: var(--brand); color: var(--brand); }
+.btn-sm.danger { color: #b91c1c; }
+.btn-sm.danger:hover { border-color: #dc2626; color: #dc2626; }
+.btn-sm:disabled { opacity: 0.55; cursor: default; }
+.confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }

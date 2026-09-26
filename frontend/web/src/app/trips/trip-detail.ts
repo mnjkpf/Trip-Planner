@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { TripService } from '../core/trip.service';
@@ -19,7 +19,25 @@ import { Itinerary, TravelContext, Trip } from '../core/models';
             {{ t.destinationName }} · {{ t.startDate | date: 'd MMM' }} – {{ t.endDate | date: 'd MMM y' }}
           </p>
         </div>
-        <span class="badge" [class]="'st-' + t.status">{{ statusLabel(t.status) }}</span>
+        <div class="head-side">
+          <span class="badge" [class]="'st-' + t.status">{{ statusLabel(t.status) }}</span>
+          <div class="detail-actions">
+            @if (t.status !== 'PLANNING') {
+              <a class="btn-sm" [routerLink]="['/trips', t.id, 'edit']">Редагувати</a>
+            }
+            @if (!confirmingDelete()) {
+              <button class="btn-sm danger" (click)="confirmingDelete.set(true)">Видалити</button>
+            } @else {
+              <span class="confirm">
+                Точно видалити?
+                <button class="btn-sm danger" (click)="remove()" [disabled]="deleting()">
+                  {{ deleting() ? '…' : 'Так' }}
+                </button>
+                <button class="btn-sm" (click)="confirmingDelete.set(false)" [disabled]="deleting()">Ні</button>
+              </span>
+            }
+          </div>
+        </div>
       </div>
 
       @if (t.status !== 'PLANNED') {
@@ -89,6 +107,7 @@ import { Itinerary, TravelContext, Trip } from '../core/models';
 })
 export class TripDetail {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private trips = inject(TripService);
   private auth = inject(AuthService);
 
@@ -98,6 +117,8 @@ export class TripDetail {
   ctx = signal<TravelContext | null>(null);
   planning = signal(false);
   error = signal<string | null>(null);
+  confirmingDelete = signal(false);
+  deleting = signal(false);
 
   constructor() {
     this.load();
@@ -113,6 +134,19 @@ export class TripDetail {
         }
       },
       error: () => this.error.set('Не вдалося завантажити подорож'),
+    });
+  }
+
+  remove() {
+    this.deleting.set(true);
+    this.error.set(null);
+    this.trips.remove(this.id).subscribe({
+      next: () => this.router.navigate(['/trips']),
+      error: () => {
+        this.deleting.set(false);
+        this.confirmingDelete.set(false);
+        this.error.set('Не вдалося видалити подорож');
+      },
     });
   }
 

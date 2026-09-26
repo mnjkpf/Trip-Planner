@@ -85,3 +85,6 @@ export interface Place {
   imageUrl: string | null;
   website: string | null;
 }
+
+// Редагування шле ті самі поля, що й створення.
+export type UpdateTripRequest = CreateTripRequest;
