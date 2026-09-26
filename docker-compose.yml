@@ -1,24 +1,16 @@
 # Локальний стек Travel Planner.
 #
-# Два режими:
-#
-#   1) Розробка з IDE — тільки інфраструктура:
-#        docker compose up -d
-#
-#   2) Повний стек у контейнерах — уся система однією командою:
-#        docker compose --profile full up -d --build
-#      Піднімає інфраструктуру + 6 сервісів + LGTM (спостережуваність).
-#      Зміну лише env (без правок коду) достатньо застосувати без --build:
-#        docker compose --profile full up -d
-#
-#   docker compose --profile full down       # зупинити, дані лишаються
-#   docker compose --profile full down -v    # знести разом з даними (томи)
+#   Розробка з IDE (тільки інфра):     docker compose up -d
+#   Повний стек у контейнерах:         docker compose --profile full up -d --build
+#     (зміну лише env — без --build:    docker compose --profile full up -d)
+#   Зупинити / знести з даними:        docker compose --profile full down [-v]
 #
 # Порти на хості: gateway 8080, user 8081, place 8082, trip 8083, context 8084,
 #                 kafka-ui 8085, planner 8086, Grafana 3000, kafka 29092, postgres 5432, redis 6379.
 #
-# Спостережуваність: усі сервіси шлють трейси й метрики по OTLP у LGTM (Tempo+Prometheus+Grafana).
-# Трейс-контекст пропагується через HTTP (RestClient) і Kafka (observation-enabled).
+# Спостережуваність: усі сервіси шлють трейси/метрики по OTLP у LGTM (Tempo+Prometheus+Grafana).
+# Health-check'и: кожен app-сервіс має перевірку порту, а залежності чекають service_healthy —
+# тож `up` завершується, коли сервіси реально приймають запити (без гонки готовності).
 
 name: travel-planner
 
@@ -100,27 +92,18 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: "true"
 
-  # =====================================================================
-  #  Спостережуваність: grafana/otel-lgtm — OTel Collector + Tempo (трейси)
-  #  + Prometheus (метрики) + Loki (логи) + Grafana (UI) в одному контейнері.
-  #  Grafana: http://localhost:3000 (anonymous, роль Admin увімкнено в образі).
-  # =====================================================================
-
   lgtm:
     image: grafana/otel-lgtm:latest
     container_name: tp-lgtm
     profiles: ["full"]
     ports:
-      - "3000:3000"     # Grafana UI
-      - "4317:4317"     # OTLP gRPC
-      - "4318:4318"     # OTLP HTTP
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
       - lgtmdata:/data
 
-  # =====================================================================
-  #  Застосунки (профіль full). Трейсинг/метрики вмикаються через
-  #  SPRING_APPLICATION_JSON (точні імена property, без relaxed-binding).
-  # =====================================================================
+  # ---- Застосунки (профіль full). Кожен має healthcheck; залежності чекають healthy. ----
 
   user-service:
     build:
@@ -143,6 +126,13 @@ services:
       - ./infra/keys:/app/infra/keys:ro
     ports:
       - "8081:8081"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8081' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   place-service:
     build:
@@ -168,6 +158,13 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8082:8082"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8082' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   trip-service:
     build:
@@ -181,7 +178,7 @@ services:
       kafka:
         condition: service_healthy
       place-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       POSTGRES_HOST: postgres
@@ -192,6 +189,13 @@ services:
       SVC_PLACE_URI: http://place-service:8082
     ports:
       - "8083:8083"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8083' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   context-service:
     build:
@@ -217,6 +221,13 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8084:8084"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8084' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   planner-service:
     build:
@@ -230,9 +241,9 @@ services:
       kafka:
         condition: service_healthy
       place-service:
-        condition: service_started
+        condition: service_healthy
       context-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
       REDIS_HOST: redis
@@ -242,6 +253,13 @@ services:
       SVC_CONTEXT_URI: http://context-service:8084
     ports:
       - "8086:8086"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8086' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   api-gateway:
     build:
@@ -251,13 +269,13 @@ services:
     profiles: ["full"]
     depends_on:
       user-service:
-        condition: service_started
+        condition: service_healthy
       place-service:
-        condition: service_started
+        condition: service_healthy
       trip-service:
-        condition: service_started
+        condition: service_healthy
       context-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_JSON: '{"management.opentelemetry.enabled":true,"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
       OTEL_SDK_DISABLED: "false"
@@ -270,6 +288,13 @@ services:
       REDIS_PORT: 6379
     ports:
       - "8080:8080"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
 volumes:
   pgdata:
