@@ -1,10 +1,21 @@
-# Локальна інфраструктура для розробки.
-# Самі сервіси запускаються з IDE — так цикл правки значно швидший.
-# Контейнеризація сервісів з'явиться пізніше, коли будуть образи.
+# Локальний стек Travel Planner.
 #
-#   docker compose up -d
-#   docker compose down          # зупинити, дані лишаються
-#   docker compose down -v       # знести разом з даними
+# Два режими:
+#
+#   1) Розробка з IDE — тільки інфраструктура (як було раніше):
+#        docker compose up -d
+#      Сервіси запускаєш з IDE; вони йдуть на localhost:5432 / localhost:6379 / localhost:29092.
+#
+#   2) Повний стек у контейнерах — уся система однією командою:
+#        docker compose --profile full up -d --build
+#      Піднімає інфраструктуру + 6 сервісів. Потрібен BuildKit (типово увімкнений у Docker Desktop).
+#
+#   docker compose --profile full down       # зупинити, дані лишаються
+#   docker compose --profile full down -v    # знести разом з даними (томи)
+#
+# Порти на хості: gateway 8080, user 8081, place 8082, trip 8083, context 8084,
+#                 kafka-ui 8085, planner 8086, kafka 29092, postgres 5432, redis 6379.
+# Точка входу для клієнта — тільки gateway (8080). Решта відкриті для зручності налагодження.
 
 name: travel-planner
 
@@ -91,6 +102,157 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: "true"
+
+  # =====================================================================
+  #  Застосунки. Тільки у профілі "full", щоб `docker compose up -d`
+  #  (без профілю) лишався IDE-режимом і піднімав саму інфраструктуру.
+  #  Образ будується з multi-stage Dockerfile у теці сервісу.
+  # =====================================================================
+
+  user-service:
+    build:
+      context: ./user-service
+    image: travel-planner/user-service
+    container_name: tp-user
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      # Приватний ключ підписує токени, публічний віддається в JWKS.
+      # Монтуємо тільки читання; у git ключі не потрапляють (.gitignore).
+      JWT_PRIVATE_KEY_LOCATION: file:/app/infra/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/app/infra/keys/jwt-public.pem
+    volumes:
+      - ./infra/keys:/app/infra/keys:ro
+    ports:
+      - "8081:8081"
+
+  place-service:
+    build:
+      context: ./place-service
+    image: travel-planner/place-service
+    container_name: tp-place
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # GEOAPIFY_API_KEY: ""   # опційно; без ключа провайдер деградує до порожнього результату
+    ports:
+      - "8082:8082"
+
+  trip-service:
+    build:
+      context: ./trip-service
+    image: travel-planner/trip-service
+    container_name: tp-trip
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      place-service:
+        condition: service_started
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+    ports:
+      - "8083:8083"
+
+  context-service:
+    build:
+      context: ./context-service
+    image: travel-planner/context-service
+    container_name: tp-context
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8084:8084"
+
+  planner-service:
+    build:
+      context: ./planner-service
+    image: travel-planner/planner-service
+    container_name: tp-planner
+    profiles: ["full"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      place-service:
+        condition: service_started
+      context-service:
+        condition: service_started
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_CONTEXT_URI: http://context-service:8084
+    ports:
+      - "8086:8086"
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: travel-planner/api-gateway
+    container_name: tp-gateway
+    profiles: ["full"]
+    depends_on:
+      user-service:
+        condition: service_started
+      place-service:
+        condition: service_started
+      trip-service:
+        condition: service_started
+      context-service:
+        condition: service_started
+    environment:
+      SVC_USER_URI: http://user-service:8081
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_TRIP_URI: http://trip-service:8083
+      SVC_CONTEXT_URI: http://context-service:8084
+      JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
 
 volumes:
   pgdata:
