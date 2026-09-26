@@ -249,3 +249,31 @@ select {
 .btn-sm.danger:hover { border-color: #dc2626; color: #dc2626; }
 .btn-sm:disabled { opacity: 0.55; cursor: default; }
 .confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+
+/* wishlist: save toggle on place cards */
+.place-card { position: relative; }
+.save-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--muted);
+  font-size: 17px; line-height: 1;
+  cursor: pointer;
+  transition: color .12s, border-color .12s, transform .08s;
+}
+.save-btn:hover { border-color: #ef4444; color: #ef4444; }
+.save-btn:active { transform: scale(0.9); }
+.save-btn.saved { color: #ef4444; border-color: #fecaca; background: #fef2f2; }
+
+/* place detail head row: category badge + save button */
+.pd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+
+/* wishlist page cards */
+.wish-card h3 { margin-bottom: 4px; }
+.wish-card h3 a { color: var(--ink); text-decoration: none; }
+.wish-card h3 a:hover { color: var(--brand); }
+.wish-card .btn-sm { margin-top: 10px; }

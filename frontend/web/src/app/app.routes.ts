@@ -8,6 +8,7 @@ import { TripEdit } from './trips/trip-edit';
 import { TripDetail } from './trips/trip-detail';
 import { PlaceSearch } from './places/place-search';
 import { PlaceDetail } from './places/place-detail';
+import { WishlistList } from './wishlist/wishlist-list';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'trips' },
@@ -19,5 +20,6 @@ export const routes: Routes = [
   { path: 'trips/:id', component: TripDetail, canActivate: [authGuard] },
   { path: 'places', component: PlaceSearch, canActivate: [authGuard] },
   { path: 'places/:id', component: PlaceDetail, canActivate: [authGuard] },
+  { path: 'wishlist', component: WishlistList, canActivate: [authGuard] },
   { path: '**', redirectTo: 'trips' },
 ];

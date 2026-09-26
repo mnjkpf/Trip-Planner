@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import * as L from 'leaflet';
 import { PlaceService } from '../core/place.service';
+import { WishlistService } from '../core/wishlist.service';
 import { Place } from '../core/models';
 
 @Component({
@@ -38,6 +39,12 @@ import { Place } from '../core/models';
       <div class="grid places-grid">
         @for (p of results(); track p.id) {
           <div class="card place-card" (click)="open(p)">
+            <button
+              class="save-btn"
+              [class.saved]="wishlist.savedIds().has(p.id)"
+              [title]="wishlist.savedIds().has(p.id) ? 'Прибрати з вішлісту' : 'Зберегти у вішліст'"
+              (click)="toggleSave(p, $event)"
+            >{{ wishlist.savedIds().has(p.id) ? '♥' : '♡' }}</button>
             <span class="badge cat-badge">{{ label(p.category) }}</span>
             <h3>{{ p.name }}</h3>
             @if (p.description) { <p class="muted">{{ p.description }}</p> }
@@ -54,6 +61,7 @@ import { Place } from '../core/models';
 export class PlaceSearch implements AfterViewInit, OnDestroy {
   private places = inject(PlaceService);
   private router = inject(Router);
+  protected wishlist = inject(WishlistService);
   private mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
   private map!: L.Map;
   private markers = L.layerGroup();
@@ -76,6 +84,10 @@ export class PlaceSearch implements AfterViewInit, OnDestroy {
     OTHER: 'Інше',
   };
   categories = Object.keys(this.labels);
+
+  constructor() {
+    this.wishlist.load(); // прогріваємо кеш вішлісту для сердечок на картках
+  }
 
   label(c: string): string {
     return this.labels[c] ?? c;
@@ -108,6 +120,17 @@ export class PlaceSearch implements AfterViewInit, OnDestroy {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  toggleSave(p: Place, ev: Event): void {
+    ev.stopPropagation();
+    if (this.wishlist.savedIds().has(p.id)) {
+      this.wishlist.remove(p.id).subscribe();
+    } else {
+      this.wishlist
+        .add({ placeId: p.id, placeName: p.name, placeLat: p.lat, placeLon: p.lon })
+        .subscribe();
+    }
   }
 
   private render(list: Place[]): void {

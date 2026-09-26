@@ -88,3 +88,21 @@ export interface Place {
 
 // Редагування шле ті самі поля, що й створення.
 export type UpdateTripRequest = CreateTripRequest;
+
+export interface WishlistItem {
+  id: string;
+  placeId: string;
+  placeName: string;
+  placeLat: number | null;
+  placeLon: number | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface WishlistItemRequest {
+  placeId: string;
+  placeName: string;
+  placeLat?: number;
+  placeLon?: number;
+  note?: string;
+}

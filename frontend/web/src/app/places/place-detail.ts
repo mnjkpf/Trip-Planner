@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import * as L from 'leaflet';
 import { PlaceService } from '../core/place.service';
+import { WishlistService } from '../core/wishlist.service';
 import { Place } from '../core/models';
 
 @Component({
@@ -13,7 +14,14 @@ import { Place } from '../core/models';
 
     @if (place(); as p) {
       <div class="card place-detail">
-        <span class="badge cat-badge">{{ label(p.category) }}</span>
+        <div class="pd-head">
+          <span class="badge cat-badge">{{ label(p.category) }}</span>
+          @if (wishlist.savedIds().has(p.id)) {
+            <button class="btn-sm danger" (click)="toggleSave(p)">♥ У вішлісті — прибрати</button>
+          } @else {
+            <button class="btn-sm" (click)="toggleSave(p)">♡ Зберегти у вішліст</button>
+          }
+        </div>
         <h1>{{ p.name }}</h1>
         @if (p.imageUrl) {
           <img class="hero" [src]="p.imageUrl" [alt]="p.name" />
@@ -41,6 +49,7 @@ import { Place } from '../core/models';
 export class PlaceDetail implements OnDestroy {
   private route = inject(ActivatedRoute);
   private placesApi = inject(PlaceService);
+  protected wishlist = inject(WishlistService);
   private mapEl = viewChild<ElementRef<HTMLDivElement>>('mapEl');
   private map?: L.Map;
 
@@ -54,6 +63,7 @@ export class PlaceDetail implements OnDestroy {
   };
 
   constructor() {
+    this.wishlist.load(); // щоб знати, чи місце вже у вішлісті
     const id = this.route.snapshot.paramMap.get('id')!;
     this.placesApi.get(id).subscribe({
       next: (p) => {
@@ -67,6 +77,16 @@ export class PlaceDetail implements OnDestroy {
 
   label(c: string): string {
     return this.labels[c] ?? c;
+  }
+
+  toggleSave(p: Place): void {
+    if (this.wishlist.savedIds().has(p.id)) {
+      this.wishlist.remove(p.id).subscribe();
+    } else {
+      this.wishlist
+        .add({ placeId: p.id, placeName: p.name, placeLat: p.lat, placeLon: p.lon })
+        .subscribe();
+    }
   }
 
   private initMap(p: Place): void {
