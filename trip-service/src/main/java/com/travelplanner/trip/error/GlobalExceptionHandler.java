@@ -1,5 +1,6 @@
 package com.travelplanner.trip.error;
 
+import com.travelplanner.trip.error.ApiExceptions.TripConflictException;
 import com.travelplanner.trip.error.ApiExceptions.TripNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,6 +18,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TripNotFoundException.class)
     public ProblemDetail handleNotFound(TripNotFoundException e) {
         return problem(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    // Конфлікт стану: наприклад, редагування під час планування.
+    @ExceptionHandler(TripConflictException.class)
+    public ProblemDetail handleConflict(TripConflictException e) {
+        return problem(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    // Крос-польова валідація в сервісі (напр. endDate < startDate).
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleBadArg(IllegalArgumentException e) {
+        return problem(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     // Немає X-User-Id → запит прийшов не через gateway або без токена

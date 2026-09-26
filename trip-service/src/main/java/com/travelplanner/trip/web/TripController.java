@@ -4,6 +4,7 @@ import com.travelplanner.trip.dto.CreateTripRequest;
 import com.travelplanner.trip.dto.ItineraryResponse;
 import com.travelplanner.trip.dto.PlanJobResponse;
 import com.travelplanner.trip.dto.TripResponse;
+import com.travelplanner.trip.dto.UpdateTripRequest;
 import com.travelplanner.trip.service.TripService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,6 +52,15 @@ public class TripController {
     public TripResponse get(@RequestHeader("X-User-Id") UUID userId,
                             @PathVariable UUID id) {
         return tripService.get(userId, id);
+    }
+
+    // Редагування подорожі. Зміна дат/координат у вже спланованої скидає маршрут
+    // (сервіс поверне статус у DRAFT) — деталі в TripService.update.
+    @PutMapping("/{id}")
+    public TripResponse update(@RequestHeader("X-User-Id") UUID userId,
+                               @PathVariable UUID id,
+                               @Valid @RequestBody UpdateTripRequest req) {
+        return tripService.update(userId, id, req);
     }
 
     // Готовий маршрут (дні + пункти). Фронт тягне його після статусу PLANNED.

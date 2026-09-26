@@ -6,15 +6,19 @@ import io.micrometer.tracing.Tracer;
 import org.springframework.beans.factory.ObjectProvider;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
+import com.travelplanner.trip.domain.ItineraryItem;
 import com.travelplanner.trip.domain.OutboxEvent;
 import com.travelplanner.trip.domain.PlanJob;
 import com.travelplanner.trip.domain.PlanJobStatus;
 import com.travelplanner.trip.domain.Trip;
+import com.travelplanner.trip.domain.TripDay;
 import com.travelplanner.trip.domain.TripStatus;
 import com.travelplanner.trip.dto.CreateTripRequest;
 import com.travelplanner.trip.dto.ItineraryResponse;
 import com.travelplanner.trip.dto.PlanJobResponse;
 import com.travelplanner.trip.dto.TripResponse;
+import com.travelplanner.trip.dto.UpdateTripRequest;
+import com.travelplanner.trip.error.ApiExceptions.TripConflictException;
 import com.travelplanner.trip.error.ApiExceptions.TripNotFoundException;
 import com.travelplanner.trip.repository.ItineraryItemRepository;
 import com.travelplanner.trip.repository.OutboxRepository;
@@ -66,6 +70,7 @@ public class TripService {
 
     @Transactional
     public TripResponse create(UUID userId, CreateTripRequest req) {
+        requireValidDates(req.startDate(), req.endDate());
         Trip trip = Trip.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
@@ -91,6 +96,45 @@ public class TripService {
     @Transactional(readOnly = true)
     public TripResponse get(UUID userId, UUID tripId) {
         return toResponse(requireOwned(userId, tripId));
+    }
+
+    /**
+     * Редагування подорожі. Правила:
+     *  - поки статус PLANNING (async-петля в польоті) — редагувати не можна (409),
+     *    інакше planner перезапише маршрут поверх нових даних;
+     *  - якщо змінилися ВХІДНІ ДЛЯ ПЛАНУВАННЯ поля (дати або координати призначення)
+     *    і маршрут уже побудований — скидаємо його (дні+пункти) і повертаємо статус
+     *    у DRAFT, щоб користувач переспланував під нові вхідні. Косметичні зміни
+     *    (назва, країна) статус не чіпають.
+     */
+    @Transactional
+    public TripResponse update(UUID userId, UUID tripId, UpdateTripRequest req) {
+        Trip trip = requireOwned(userId, tripId);
+        if (trip.getStatus() == TripStatus.PLANNING) {
+            throw new TripConflictException("Подорож зараз планується — зачекай завершення, перш ніж редагувати");
+        }
+        requireValidDates(req.startDate(), req.endDate());
+
+        boolean planningInputsChanged =
+                !trip.getStartDate().equals(req.startDate())
+                        || !trip.getEndDate().equals(req.endDate())
+                        || trip.getDestinationLat() != req.destinationLat()
+                        || trip.getDestinationLon() != req.destinationLon();
+
+        trip.setTitle(req.title());
+        trip.setDestinationName(req.destinationName());
+        trip.setDestinationCountry(req.destinationCountry());
+        trip.setDestinationLat(req.destinationLat());
+        trip.setDestinationLon(req.destinationLon());
+        trip.setStartDate(req.startDate());
+        trip.setEndDate(req.endDate());
+
+        if (planningInputsChanged && trip.getStatus() == TripStatus.PLANNED) {
+            clearItinerary(tripId);
+            trip.setStatus(TripStatus.DRAFT);
+        }
+        // managed entity — зміни підуть dirty checking-ом на комміті
+        return toResponse(trip);
     }
 
     /**
@@ -120,7 +164,7 @@ public class TripService {
     @Transactional
     public void delete(UUID userId, UUID tripId) {
         Trip trip = requireOwned(userId, tripId);
-        tripRepository.delete(trip);
+        tripRepository.delete(trip);   // trip_days / itinerary_items / plan_jobs — ON DELETE CASCADE
     }
 
     /**
@@ -182,6 +226,26 @@ public class TripService {
     private Trip requireOwned(UUID userId, UUID tripId) {
         return tripRepository.findByIdAndUserId(tripId, userId)
                 .orElseThrow(() -> new TripNotFoundException("Подорож не знайдено: " + tripId));
+    }
+
+    private void requireValidDates(java.time.LocalDate start, java.time.LocalDate end) {
+        if (end.isBefore(start)) {
+            throw new IllegalArgumentException("Дата кінця не може бути раніше за дату початку");
+        }
+    }
+
+    /**
+     * Прибирає побудований маршрут (дні + пункти) поточної подорожі. Викликається
+     * при зміні вхідних для планування полів, щоб не лишати застарілий маршрут.
+     * Пункти видаляємо явно (по днях), потім самі дні.
+     */
+    private void clearItinerary(UUID tripId) {
+        List<TripDay> days = tripDayRepository.findByTripIdOrderByDayIndexAsc(tripId);
+        for (TripDay d : days) {
+            List<ItineraryItem> items = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(d.getId());
+            itineraryItemRepository.deleteAll(items);
+        }
+        tripDayRepository.deleteAll(days);
     }
 
     private TripResponse toResponse(Trip t) {
