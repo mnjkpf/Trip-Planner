@@ -45,6 +45,9 @@ import { Place } from '../core/models';
               [title]="wishlist.savedIds().has(p.id) ? 'Прибрати з вішлісту' : 'Зберегти у вішліст'"
               (click)="toggleSave(p, $event)"
             >{{ wishlist.savedIds().has(p.id) ? '♥' : '♡' }}</button>
+            @if (p.imageUrl) {
+              <img class="place-thumb" [src]="p.imageUrl" [alt]="p.name" loading="lazy" />
+            }
             <span class="badge cat-badge">{{ label(p.category) }}</span>
             <h3>{{ p.name }}</h3>
             @if (p.description) { <p class="muted">{{ p.description }}</p> }

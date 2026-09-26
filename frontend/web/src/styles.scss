@@ -277,3 +277,14 @@ select {
 .wish-card h3 a { color: var(--ink); text-decoration: none; }
 .wish-card h3 a:hover { color: var(--brand); }
 .wish-card .btn-sm { margin-top: 10px; }
+
+/* place card thumbnail (Geoapify photo, when available) */
+.place-thumb {
+  display: block;
+  width: calc(100% + 36px);
+  height: 150px;
+  margin: -18px -18px 12px;   /* виходимо за padding картки (18px) до її країв */
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+  background: #eef1f5;
+}
