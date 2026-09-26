@@ -5,6 +5,7 @@ import com.travelplanner.trip.dto.ItineraryResponse;
 import com.travelplanner.trip.dto.PlanJobResponse;
 import com.travelplanner.trip.dto.TripResponse;
 import com.travelplanner.trip.service.TripService;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -63,6 +64,13 @@ public class TripController {
     public void delete(@RequestHeader("X-User-Id") UUID userId,
                        @PathVariable UUID id) {
         tripService.delete(userId, id);
+    }
+
+    // SSE-потік статусу планування: подія 'planned', коли маршрут готовий.
+    @GetMapping(value = "/{id}/plan-events", produces = "text/event-stream")
+    public SseEmitter planEvents(@RequestHeader("X-User-Id") UUID userId,
+                                 @PathVariable UUID id) {
+        return tripService.planEvents(userId, id);
     }
 
     // Асинхронна побудова маршруту: 202 Accepted + jobId одразу.

@@ -11,8 +11,10 @@ import com.travelplanner.trip.repository.ItineraryItemRepository;
 import com.travelplanner.trip.repository.PlanJobRepository;
 import com.travelplanner.trip.repository.TripDayRepository;
 import com.travelplanner.trip.repository.TripRepository;
+import com.travelplanner.trip.sse.PlanCompletedInternal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,15 +41,18 @@ public class PlanResultService {
     private final TripRepository tripRepository;
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
+    private final ApplicationEventPublisher events;
 
     public PlanResultService(PlanJobRepository planJobRepository,
                              TripRepository tripRepository,
                              TripDayRepository tripDayRepository,
-                             ItineraryItemRepository itineraryItemRepository) {
+                             ItineraryItemRepository itineraryItemRepository,
+                             ApplicationEventPublisher events) {
         this.planJobRepository = planJobRepository;
         this.tripRepository = tripRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
+        this.events = events;
     }
 
     @Transactional
@@ -107,6 +112,9 @@ public class PlanResultService {
 
         trip.setStatus(TripStatus.PLANNED);
         tripRepository.save(trip);
+
+        // SSE-підписники дізнаються ПІСЛЯ коміту (AFTER_COMMIT), щоб дані вже були в БД
+        events.publishEvent(new PlanCompletedInternal(tripId));
 
         log.info("маршрут застосовано для подорожі {}: {} днів, {} пунктів (job {})",
                 tripId, days.size(), itemCount, jobId);

@@ -17,8 +17,12 @@ import com.travelplanner.trip.repository.OutboxRepository;
 import com.travelplanner.trip.repository.PlanJobRepository;
 import com.travelplanner.trip.repository.TripDayRepository;
 import com.travelplanner.trip.repository.TripRepository;
+import com.travelplanner.trip.sse.PlanEvents;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -34,6 +38,7 @@ public class TripService {
     private final OutboxRepository outboxRepository;
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
+    private final PlanEvents planEvents;
     private final JsonMapper jsonMapper;
 
     public TripService(TripRepository tripRepository,
@@ -41,12 +46,14 @@ public class TripService {
                        OutboxRepository outboxRepository,
                        TripDayRepository tripDayRepository,
                        ItineraryItemRepository itineraryItemRepository,
+                       PlanEvents planEvents,
                        JsonMapper jsonMapper) {
         this.tripRepository = tripRepository;
         this.planJobRepository = planJobRepository;
         this.outboxRepository = outboxRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
+        this.planEvents = planEvents;
         this.jsonMapper = jsonMapper;
     }
 
@@ -140,6 +147,26 @@ public class TripService {
         trip.setStatus(TripStatus.PLANNING);   // managed entity — оновиться dirty checking
 
         return new PlanJobResponse(job.getId(), tripId, job.getStatus(), job.getRequestedAt());
+    }
+
+    /**
+     * SSE-підписка на завершення планування. Якщо поїздка вже PLANNED — шлемо подію
+     * одразу (клієнт міг підписатись після завершення). Інакше емітер чекає нотифікації
+     * від PlanResultService (AFTER_COMMIT).
+     */
+    @Transactional(readOnly = true)
+    public SseEmitter planEvents(UUID userId, UUID tripId) {
+        Trip trip = requireOwned(userId, tripId);
+        SseEmitter emitter = planEvents.subscribe(tripId);
+        if (trip.getStatus() == TripStatus.PLANNED) {
+            try {
+                emitter.send(SseEmitter.event().name("planned").data("PLANNED"));
+                emitter.complete();
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            }
+        }
+        return emitter;
     }
 
     // ---- helpers ----

@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { TripService } from '../core/trip.service';
+import { AuthService } from '../core/auth.service';
 import { Itinerary, TravelContext, Trip } from '../core/models';
 
 @Component({
@@ -89,6 +90,7 @@ import { Itinerary, TravelContext, Trip } from '../core/models';
 export class TripDetail {
   private route = inject(ActivatedRoute);
   private trips = inject(TripService);
+  private auth = inject(AuthService);
 
   id = this.route.snapshot.paramMap.get('id')!;
   trip = signal<Trip | null>(null);
@@ -118,7 +120,7 @@ export class TripDetail {
     this.planning.set(true);
     this.error.set(null);
     this.trips.plan(this.id).subscribe({
-      next: () => this.poll(),
+      next: () => this.streamEvents(this.id),
       error: () => {
         this.planning.set(false);
         this.error.set('Не вдалося запустити планування');
@@ -149,6 +151,60 @@ export class TripDetail {
         },
         complete: () => this.planning.set(false),
       });
+  }
+
+  // Реальний час: читаємо SSE-потік статусу через fetch (щоб можна було
+  // передати заголовок Authorization, чого EventSource не вміє). Подія 'planned'
+  // приходить, коли trip-service застосував маршрут. Якщо потік недоступний —
+  // фолбек на поллінг.
+  private async streamEvents(id: string): Promise<void> {
+    const token = this.auth.token;
+    try {
+      const res = await fetch(`/api/trips/${id}/plan-events`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok || !res.body) {
+        this.poll();
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let planned = false;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (value) {
+          buf += decoder.decode(value, { stream: true });
+        }
+        if (buf.includes('PLANNED')) {
+          planned = true;
+          break;
+        }
+        if (done) {
+          break;
+        }
+      }
+      reader.cancel().catch(() => undefined);
+      if (planned) {
+        this.onPlanned(id);
+      } else {
+        this.poll();
+      }
+    } catch {
+      this.poll();
+    }
+  }
+
+  private onPlanned(id: string): void {
+    this.trips.get(id).subscribe({
+      next: (t) => {
+        this.trip.set(t);
+        this.planning.set(false);
+        this.loadItinerary();
+        this.loadContext(t);
+      },
+      error: () => this.planning.set(false),
+    });
   }
 
   private loadItinerary() {
