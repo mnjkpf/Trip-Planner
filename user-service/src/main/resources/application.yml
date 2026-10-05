@@ -35,7 +35,12 @@ app:
     public-key-location: ${JWT_PUBLIC_KEY_LOCATION:file:infra/keys/jwt-public.pem}
     access-ttl: ${JWT_ACCESS_TTL:30m}
     refresh-ttl: ${JWT_REFRESH_TTL:14d}
-    key-id: travel-planner-key      # kid — той самий у токені й у JWKS
+    key-id: waylo-key      # kid — той самий у токені й у JWKS
+  oauth:
+    google:
+      # Web OAuth 2.0 Client ID з Google Cloud Console. Порожній → ендпоінт
+      # /api/auth/google повертає 503 (фіча вимкнена), решта входу працює.
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
 
 management:
   endpoints:

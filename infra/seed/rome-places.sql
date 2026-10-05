@@ -2,7 +2,7 @@ SET client_encoding TO 'UTF8';
 
 -- Демо-каталог: ~14 місць Рима. Ідемпотентно (фіксовані UUID + ON CONFLICT).
 -- Запуск проти РОБОЧОГО placedb (не Flyway-міграція — щоб не чіпати тести place-service):
---   Get-Content infra\seed\rome-places.sql | docker exec -i tp-postgres psql -U tp -d placedb
+--   Get-Content infra\seed\rome-places.sql | docker exec -i waylo-postgres psql -U tp -d placedb
 --
 -- location = geometry(Point,4326): ST_MakePoint(lon, lat) — X=довгота, Y=широта.
 

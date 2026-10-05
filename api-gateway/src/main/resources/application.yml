@@ -31,6 +31,16 @@ spring:
               uri: ${SVC_PLACE_URI:http://localhost:8082}
               predicates:
                 - Path=/api/places/**
+            # Публічний перегляд маршруту за посиланням — анонімний вхід, тому
+            # окремий роут: у метриках gateway видно його трафік окремо від
+            # приватного. Свого RequestRateLimiter тут НЕМА навмисно: він у
+            # default-filters, а бакет у Redis спільний на ключ (ip:...), тож
+            # другий фільтр лише з'їдав би токени двічі. Перебір токена і так
+            # не загроза — у ньому 256 біт ентропії.
+            - id: trip-service-public
+              uri: ${SVC_TRIP_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/public/trips/**
             - id: trip-service
               uri: ${SVC_TRIP_URI:http://localhost:8083}
               predicates:
@@ -39,9 +49,13 @@ spring:
               uri: ${SVC_CONTEXT_URI:http://localhost:8084}
               predicates:
                 - Path=/api/context/**
+            - id: offer-service
+              uri: ${SVC_OFFER_URI:http://localhost:8087}
+              predicates:
+                - Path=/api/flights/**,/api/hotels/**
 
   # Gateway = OAuth2 resource server. Валідує RS256-токени від user-service
-  # по публічних ключах з JWKS (kid travel-planner-key). Ключі не тримаємо тут.
+  # по публічних ключах з JWKS (kid waylo-key). Ключі не тримаємо тут.
   security:
     oauth2:
       resourceserver:

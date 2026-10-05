@@ -43,9 +43,10 @@ app:
     geoapify:
       base-url: ${GEOAPIFY_BASE_URL:https://api.geoapify.com/v2}
       api-key: ${GEOAPIFY_API_KEY:}
+      geocode-base-url: ${GEOAPIFY_GEOCODE_BASE_URL:https://api.geoapify.com/v1}
     wikipedia:
       base-url: ${WIKIPEDIA_BASE_URL:https://en.wikipedia.org/api/rest_v1}
-      user-agent: ${WIKIPEDIA_USER_AGENT:TravelPlanner/1.0 (portfolio pet project)}
+      user-agent: ${WIKIPEDIA_USER_AGENT:Waylo/1.0 (portfolio pet project)}
   search:
     default-radius-meters: 2000
     max-radius-meters: 50000
