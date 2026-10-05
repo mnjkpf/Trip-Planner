@@ -369,5 +369,21 @@
     "cat_activity": "Atrakcje",
     "cat_shopping": "Zakupy",
     "cat_other": "Inne"
+  },
+  "members": {
+    "btn": "Osoby",
+    "title": "Kto ma dostęp",
+    "email": "E-mail",
+    "invite": "Zaproś",
+    "hint": "Osoba musi już mieć konto w Waylo.",
+    "role_owner": "Właściciel",
+    "role_editor": "Edytor",
+    "role_viewer": "Obserwator",
+    "you": "ty",
+    "leave": "Opuść",
+    "unknown_email": "brak e-maila",
+    "not_found": "Nie ma konta z tym adresem",
+    "already": "Ta osoba już ma dostęp",
+    "error": "Nie udało się zaktualizować dostępu"
   }
 }

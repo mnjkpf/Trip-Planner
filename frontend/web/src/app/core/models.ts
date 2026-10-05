@@ -18,6 +18,8 @@ export interface PlanPreferences {
   dayStartTime?: string | null;
 }
 
+export type TripRole = 'OWNER' | 'EDITOR' | 'VIEWER';
+
 export interface Trip {
   id: string;
   userId: string;
@@ -31,6 +33,8 @@ export interface Trip {
   endDate: string;
   status: 'DRAFT' | 'PLANNING' | 'PLANNED' | 'ARCHIVED';
   preferences: PlanPreferences | null;
+  /** Роль того, хто запитує: по ній ховаємо кнопки редагування. */
+  role: TripRole;
   createdAt: string;
 }
 
@@ -333,4 +337,19 @@ export interface Budget {
 export interface BudgetRequest {
   amount: number | null;
   currency?: string | null;
+}
+
+export interface TripMember {
+  id: string;
+  userId: string;
+  email: string;
+  role: TripRole;
+  /** true для того, хто дивиться список. */
+  self: boolean;
+  createdAt: string;
+}
+
+export interface InviteMemberRequest {
+  email: string;
+  role: 'EDITOR' | 'VIEWER';
 }

@@ -1,6 +1,7 @@
 package com.waylo.trip.error;
 
 import com.waylo.trip.error.ApiExceptions.TripConflictException;
+import com.waylo.trip.error.ApiExceptions.TripForbiddenException;
 import com.waylo.trip.error.ApiExceptions.TripNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -18,6 +19,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TripNotFoundException.class)
     public ProblemDetail handleNotFound(TripNotFoundException e) {
         return problem(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    // Учасник є, але роль нижча за потрібну.
+    @ExceptionHandler(TripForbiddenException.class)
+    public ProblemDetail handleForbidden(TripForbiddenException e) {
+        return problem(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     // Конфлікт стану: наприклад, редагування під час планування.

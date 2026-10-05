@@ -1,5 +1,6 @@
 package com.waylo.trip.dto;
 
+import com.waylo.trip.domain.TripRole;
 import com.waylo.trip.domain.TripStatus;
 
 import java.time.Instant;
@@ -19,5 +20,7 @@ public record TripResponse(
         LocalDate endDate,
         TripStatus status,
         PlanPreferences preferences,
+        /** Роль того, хто запитує — фронт по ній ховає кнопки редагування. */
+        TripRole role,
         Instant createdAt
 ) {}

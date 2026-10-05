@@ -369,5 +369,21 @@
     "cat_activity": "Activities",
     "cat_shopping": "Shopping",
     "cat_other": "Other"
+  },
+  "members": {
+    "btn": "People",
+    "title": "People with access",
+    "email": "Email",
+    "invite": "Invite",
+    "hint": "The person must already have a Waylo account.",
+    "role_owner": "Owner",
+    "role_editor": "Editor",
+    "role_viewer": "Viewer",
+    "you": "you",
+    "leave": "Leave",
+    "unknown_email": "no email yet",
+    "not_found": "No Waylo account with that email",
+    "already": "This person already has access",
+    "error": "Could not update access"
   }
 }

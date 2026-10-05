@@ -1,8 +1,10 @@
 package com.waylo.trip.service;
 
+import com.waylo.trip.access.TripAccess;
 import com.waylo.trip.domain.ExpenseCategory;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripExpense;
+import com.waylo.trip.domain.TripRole;
 import com.waylo.trip.dto.BudgetRequest;
 import com.waylo.trip.dto.BudgetResponse;
 import com.waylo.trip.dto.ExpenseRequest;
@@ -31,23 +33,23 @@ import java.util.UUID;
 @Service
 public class BudgetService {
 
-    private final TripRepository tripRepository;
     private final TripExpenseRepository expenseRepository;
+    private final TripAccess access;
 
-    public BudgetService(TripRepository tripRepository, TripExpenseRepository expenseRepository) {
-        this.tripRepository = tripRepository;
+    public BudgetService(TripExpenseRepository expenseRepository, TripAccess access) {
         this.expenseRepository = expenseRepository;
+        this.access = access;
     }
 
     @Transactional(readOnly = true)
     public BudgetResponse get(UUID userId, UUID tripId) {
-        return summary(requireOwned(userId, tripId));
+        return summary(access.require(userId, tripId, TripRole.VIEWER));
     }
 
     /** Плановий бюджет. amount == null стирає план, валюта тоді теж не потрібна. */
     @Transactional
     public BudgetResponse setBudget(UUID userId, UUID tripId, BudgetRequest req) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         if (req.amount() == null) {
             trip.setBudgetAmount(null);
             trip.setBudgetCurrency(null);
@@ -61,7 +63,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetResponse addExpense(UUID userId, UUID tripId, ExpenseRequest req) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         String currency = normalizeCurrency(req.currency());
 
         expenseRepository.saveAndFlush(TripExpense.builder()
@@ -85,7 +87,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetResponse updateExpense(UUID userId, UUID tripId, UUID expenseId, ExpenseRequest req) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         TripExpense expense = expenseRepository.findByIdAndTripId(expenseId, tripId)
                 .orElseThrow(() -> new TripNotFoundException("Витрату не знайдено"));
 
@@ -100,7 +102,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetResponse deleteExpense(UUID userId, UUID tripId, UUID expenseId) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         expenseRepository.findByIdAndTripId(expenseId, tripId)
                 .ifPresent(expenseRepository::delete);
         expenseRepository.flush();
@@ -143,10 +145,6 @@ public class BudgetService {
                 e.getCurrency(), e.getSpentOn(), e.getNote(), e.getCreatedAt());
     }
 
-    private Trip requireOwned(UUID userId, UUID tripId) {
-        return tripRepository.findByIdAndUserId(tripId, userId)
-                .orElseThrow(() -> new TripNotFoundException("Подорож не знайдено"));
-    }
 
     private static String normalizeCurrency(String currency) {
         return currency == null ? null : currency.trim().toUpperCase(Locale.ROOT);

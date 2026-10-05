@@ -12,7 +12,10 @@ import com.waylo.trip.domain.PlanJob;
 import com.waylo.trip.domain.PlanJobStatus;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripDay;
+import com.waylo.trip.domain.TripMember;
+import com.waylo.trip.domain.TripRole;
 import com.waylo.trip.domain.TripStatus;
+import com.waylo.trip.access.TripAccess;
 import com.waylo.trip.dto.AddItemRequest;
 import com.waylo.trip.dto.CreateTripRequest;
 import com.waylo.trip.dto.ItineraryResponse;
@@ -27,6 +30,7 @@ import com.waylo.trip.repository.ItineraryItemRepository;
 import com.waylo.trip.repository.OutboxRepository;
 import com.waylo.trip.repository.PlanJobRepository;
 import com.waylo.trip.repository.TripDayRepository;
+import com.waylo.trip.repository.TripMemberRepository;
 import com.waylo.trip.repository.TripRepository;
 import com.waylo.trip.sse.PlanEvents;
 import org.springframework.stereotype.Service;
@@ -41,6 +45,7 @@ import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Service
@@ -54,6 +59,8 @@ public class TripService {
     private final PlanEvents planEvents;
     private final ObjectProvider<Tracer> tracerProvider;
     private final JsonMapper jsonMapper;
+    private final TripAccess access;
+    private final TripMemberRepository memberRepository;
 
     public TripService(TripRepository tripRepository,
                        PlanJobRepository planJobRepository,
@@ -62,7 +69,9 @@ public class TripService {
                        ItineraryItemRepository itineraryItemRepository,
                        PlanEvents planEvents,
                        ObjectProvider<Tracer> tracerProvider,
-                       JsonMapper jsonMapper) {
+                       JsonMapper jsonMapper,
+                       TripAccess access,
+                       TripMemberRepository memberRepository) {
         this.tripRepository = tripRepository;
         this.planJobRepository = planJobRepository;
         this.outboxRepository = outboxRepository;
@@ -71,10 +80,12 @@ public class TripService {
         this.planEvents = planEvents;
         this.tracerProvider = tracerProvider;
         this.jsonMapper = jsonMapper;
+        this.access = access;
+        this.memberRepository = memberRepository;
     }
 
     @Transactional
-    public TripResponse create(UUID userId, CreateTripRequest req) {
+    public TripResponse create(UUID userId, String userEmail, CreateTripRequest req) {
         requireValidDates(req.startDate(), req.endDate());
         Trip trip = Trip.builder()
                 .id(UUID.randomUUID())
@@ -91,18 +102,32 @@ public class TripService {
                 .build();
         applyPreferences(trip, req.preferences());
         tripRepository.save(trip);
-        return toResponse(trip);
+        // Автор одразу стає учасником: доступ скрізь перевіряється саме по
+        // членству, тож без цього рядка він не побачив би власну подорож.
+        memberRepository.save(TripMember.builder()
+                .id(UUID.randomUUID())
+                .tripId(trip.getId())
+                .userId(userId)
+                .email(userEmail == null ? "" : userEmail)
+                .role(TripRole.OWNER)
+                .invitedBy(userId)
+                .build());
+        return toResponse(trip, TripRole.OWNER);
     }
 
     @Transactional(readOnly = true)
     public List<TripResponse> list(UUID userId) {
-        return tripRepository.findByUserIdOrderByStartDateDesc(userId)
-                .stream().map(this::toResponse).toList();
+        Map<UUID, TripRole> roles = memberRepository.findByUserId(userId).stream()
+                .collect(Collectors.toMap(TripMember::getTripId, TripMember::getRole));
+        return tripRepository.findForMember(userId).stream()
+                .map(t -> toResponse(t, roles.get(t.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public TripResponse get(UUID userId, UUID tripId) {
-        return toResponse(requireOwned(userId, tripId));
+        Trip trip = access.require(userId, tripId, TripRole.VIEWER);
+        return toResponse(trip, access.roleOf(userId, tripId));
     }
 
     /**
@@ -116,7 +141,7 @@ public class TripService {
      */
     @Transactional
     public TripResponse update(UUID userId, UUID tripId, UpdateTripRequest req) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         if (trip.getStatus() == TripStatus.PLANNING) {
             throw new TripConflictException("Подорож зараз планується — зачекай завершення, перш ніж редагувати");
         }
@@ -143,16 +168,16 @@ public class TripService {
             trip.setStatus(TripStatus.DRAFT);
         }
         // managed entity — зміни підуть dirty checking-ом на комміті
-        return toResponse(trip);
+        return toResponse(trip, access.roleOf(userId, tripId));
     }
 
     /**
      * Готовий маршрут: дні по порядку, у кожному — пункти по порядку.
-     * Перевірка власника — через requireOwned, щоб не віддати чужий маршрут.
+     * Доступ — через TripAccess: маршрут бачать усі учасники, і глядачі теж.
      */
     @Transactional(readOnly = true)
     public ItineraryResponse itinerary(UUID userId, UUID tripId) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.VIEWER);
         List<ItineraryResponse.Day> days = tripDayRepository.findByTripIdOrderByDayIndexAsc(tripId).stream()
                 .map(this::toDay)
                 .toList();
@@ -201,7 +226,7 @@ public class TripService {
 
     @Transactional
     public void delete(UUID userId, UUID tripId) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.OWNER);
         tripRepository.delete(trip);   // trip_days / itinerary_items / plan_jobs — ON DELETE CASCADE
     }
 
@@ -213,7 +238,7 @@ public class TripService {
      */
     @Transactional
     public PlanJobResponse requestPlan(UUID userId, UUID tripId) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
 
         PlanJob job = PlanJob.builder()
                 .id(UUID.randomUUID())
@@ -246,7 +271,7 @@ public class TripService {
      */
     @Transactional(readOnly = true)
     public SseEmitter planEvents(UUID userId, UUID tripId) {
-        Trip trip = requireOwned(userId, tripId);
+        Trip trip = access.require(userId, tripId, TripRole.VIEWER);
         SseEmitter emitter = planEvents.subscribe(tripId);
         if (trip.getStatus() == TripStatus.PLANNED) {
             try {
@@ -260,11 +285,6 @@ public class TripService {
     }
 
     // ---- helpers ----
-
-    private Trip requireOwned(UUID userId, UUID tripId) {
-        return tripRepository.findByIdAndUserId(tripId, userId)
-                .orElseThrow(() -> new TripNotFoundException("Подорож не знайдено: " + tripId));
-    }
 
     private void requireValidDates(java.time.LocalDate start, java.time.LocalDate end) {
         if (end.isBefore(start)) {
@@ -322,14 +342,14 @@ public class TripService {
         return new PlanPreferences(t.getPace(), interests, t.getSearchRadiusM(), t.getDayStartTime());
     }
 
-    private TripResponse toResponse(Trip t) {
+    private TripResponse toResponse(Trip t, TripRole role) {
         return new TripResponse(
                 t.getId(), t.getUserId(), t.getTitle(),
                 t.getDestinationName(), t.getDestinationCountry(),
                 t.getDestinationLat(), t.getDestinationLon(),
                 t.getOriginAirport(),
                 t.getStartDate(), t.getEndDate(), t.getStatus(),
-                readPreferences(t), t.getCreatedAt());
+                readPreferences(t), role, t.getCreatedAt());
     }
 
     /**
@@ -389,7 +409,7 @@ public class TripService {
     /** Додати місце (з вішлісту) у кінець дня; перенумерувати й перерахувати час дня. */
     @Transactional
     public ItineraryResponse addItem(UUID userId, UUID tripId, int dayIndex, AddItemRequest req) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         TripDay day = tripDayRepository.findByTripIdAndDayIndex(tripId, dayIndex)
                 .orElseThrow(() -> new TripNotFoundException("День не знайдено: " + dayIndex));
         List<ItineraryItem> list = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(day.getId());
@@ -414,7 +434,7 @@ public class TripService {
 
     @Transactional
     public ItineraryResponse removeItem(UUID userId, UUID tripId, UUID itemId) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         ItineraryItem item = requireItem(tripId, itemId);
         List<ItineraryItem> list = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(item.getTripDayId());
         list.removeIf(x -> x.getId().equals(itemId));
@@ -426,7 +446,7 @@ public class TripService {
     /** Перенести пункт у день toDayIndex на позицію toOrder; перенумерувати обидва дні. */
     @Transactional
     public ItineraryResponse moveItem(UUID userId, UUID tripId, UUID itemId, int toDayIndex, int toOrder) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         ItineraryItem moved = requireItem(tripId, itemId);
         UUID fromDayId = moved.getTripDayId();
         TripDay toDay = tripDayRepository.findByTripIdAndDayIndex(tripId, toDayIndex)
@@ -453,7 +473,7 @@ public class TripService {
     /** Час/нотатка/locked. null = не чіпати; порожній рядок = очистити. Час не перераховуємо. */
     @Transactional
     public ItineraryResponse patchItem(UUID userId, UUID tripId, UUID itemId, PatchItemRequest req) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         ItineraryItem item = requireItem(tripId, itemId);
         if (req.plannedStart() != null) {
             item.setPlannedStart(req.plannedStart().isBlank() ? null : LocalTime.parse(req.plannedStart()));
@@ -470,7 +490,7 @@ public class TripService {
     /** Переупорядкувати день nearest-neighbor; прибиті (locked) лишаються на місці. */
     @Transactional
     public ItineraryResponse optimizeDay(UUID userId, UUID tripId, int dayIndex) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         TripDay day = tripDayRepository.findByTripIdAndDayIndex(tripId, dayIndex)
                 .orElseThrow(() -> new TripNotFoundException("День не знайдено: " + dayIndex));
         List<ItineraryItem> list = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(day.getId());

@@ -24,6 +24,8 @@ public class IdentityRelayFilter implements GlobalFilter, Ordered {
 
     public static final String USER_ID_HEADER = "X-User-Id";
     public static final String USER_ROLE_HEADER = "X-User-Role";
+    /** Пошта з токена — trip-service показує нею учасників, не ходячи в user-service. */
+    public static final String USER_EMAIL_HEADER = "X-User-Email";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -39,15 +41,20 @@ public class IdentityRelayFilter implements GlobalFilter, Ordered {
         String uid = token.getClaimAsString("uid");
         final String userId = (uid != null) ? uid : token.getSubject();
         final String role = token.getClaimAsString("role");
+        final String email = token.getClaimAsString("email");
         return exchange.mutate()
                 .request(r -> r.headers(h -> {
                     h.remove(USER_ID_HEADER);
                     h.remove(USER_ROLE_HEADER);
+                    h.remove(USER_EMAIL_HEADER);
                     if (userId != null) {
                         h.set(USER_ID_HEADER, userId);
                     }
                     if (role != null) {
                         h.set(USER_ROLE_HEADER, role);
+                    }
+                    if (email != null) {
+                        h.set(USER_EMAIL_HEADER, email);
                     }
                 }))
                 .build();
@@ -58,6 +65,7 @@ public class IdentityRelayFilter implements GlobalFilter, Ordered {
                 .request(r -> r.headers(h -> {
                     h.remove(USER_ID_HEADER);
                     h.remove(USER_ROLE_HEADER);
+                    h.remove(USER_EMAIL_HEADER);
                 }))
                 .build();
     }

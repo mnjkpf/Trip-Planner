@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.waylo.user.domain.User;
 import com.waylo.user.dto.ChangePasswordRequest;
 import com.waylo.user.dto.UpdateProfileRequest;
+import com.waylo.user.dto.UserLookupResponse;
 import com.waylo.user.dto.UserResponse;
 import com.waylo.user.error.ApiExceptions.UserNotFoundException;
 import com.waylo.user.repository.RefreshTokenRepository;
@@ -27,6 +28,19 @@ public class UserService {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * Пошук за поштою — для запрошення в подорож з trip-service.
+     * Віддаємо мінімум полів і 404 на невідому пошту: ендпоінт за JWT, але
+     * перетворювати його на зручний інструмент перебору пошт теж не варто.
+     */
+    @Transactional(readOnly = true)
+    public UserLookupResponse lookupByEmail(String email) {
+        return userRepository.findByEmailIgnoreCase(email.trim())
+                .filter(User::isEnabled)
+                .map(u -> new UserLookupResponse(u.getId(), u.getEmail(), u.getDisplayName()))
+                .orElseThrow(() -> new UserNotFoundException("Користувача з такою поштою немає"));
     }
 
     @Transactional(readOnly = true)

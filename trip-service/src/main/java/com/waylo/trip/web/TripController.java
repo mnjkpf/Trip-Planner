@@ -47,7 +47,7 @@ public class TripController {
     @GetMapping("/{id}/calendar.ics")
     public ResponseEntity<byte[]> calendar(@RequestHeader("X-User-Id") UUID userId,
                                            @PathVariable UUID id) {
-        return IcsResponse.attachment(icsExporter, calendarService.forOwner(userId, id));
+        return IcsResponse.attachment(icsExporter, calendarService.forMember(userId, id));
     }
 
     // userId у всіх методах — з заголовка X-User-Id, який ставить gateway
@@ -56,8 +56,9 @@ public class TripController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TripResponse create(@RequestHeader("X-User-Id") UUID userId,
+                               @RequestHeader(value = "X-User-Email", required = false) String userEmail,
                                @Valid @RequestBody CreateTripRequest req) {
-        return tripService.create(userId, req);
+        return tripService.create(userId, userEmail, req);
     }
 
     @GetMapping

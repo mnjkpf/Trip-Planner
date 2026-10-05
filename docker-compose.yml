@@ -191,6 +191,7 @@ services:
       POSTGRES_PASSWORD: tp
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SVC_PLACE_URI: http://place-service:8082
+      SVC_USER_URI: http://user-service:8081
     ports:
       - "8083:8083"
     healthcheck:

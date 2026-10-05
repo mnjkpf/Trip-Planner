@@ -369,5 +369,21 @@
     "cat_activity": "Activités",
     "cat_shopping": "Achats",
     "cat_other": "Autre"
+  },
+  "members": {
+    "btn": "Personnes",
+    "title": "Qui a accès",
+    "email": "E-mail",
+    "invite": "Inviter",
+    "hint": "La personne doit déjà avoir un compte Waylo.",
+    "role_owner": "Propriétaire",
+    "role_editor": "Éditeur",
+    "role_viewer": "Lecteur",
+    "you": "toi",
+    "leave": "Quitter",
+    "unknown_email": "pas d'e-mail",
+    "not_found": "Aucun compte avec cet e-mail",
+    "already": "Cette personne a déjà accès",
+    "error": "Impossible de mettre à jour l'accès"
   }
 }

@@ -1,8 +1,10 @@
 package com.waylo.trip.service;
 
+import com.waylo.trip.access.TripAccess;
 import com.waylo.trip.domain.ItineraryItem;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripDay;
+import com.waylo.trip.domain.TripRole;
 import com.waylo.trip.domain.TripShare;
 import com.waylo.trip.dto.ShareLinkResponse;
 import com.waylo.trip.dto.SharedTripResponse;
@@ -43,15 +45,18 @@ public class ShareService {
     private final TripShareRepository shareRepository;
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
+    private final TripAccess access;
 
     public ShareService(TripRepository tripRepository,
                         TripShareRepository shareRepository,
                         TripDayRepository tripDayRepository,
-                        ItineraryItemRepository itineraryItemRepository) {
+                        ItineraryItemRepository itineraryItemRepository,
+                        TripAccess access) {
         this.tripRepository = tripRepository;
         this.shareRepository = shareRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
+        this.access = access;
     }
 
     /**
@@ -61,7 +66,7 @@ public class ShareService {
      */
     @Transactional
     public ShareLinkResponse share(UUID userId, UUID tripId) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         TripShare existing = shareRepository.findByTripIdAndRevokedAtIsNull(tripId).orElse(null);
         if (existing != null) {
             return ShareLinkResponse.of(existing.getToken(), existing.getCreatedAt());
@@ -80,7 +85,7 @@ public class ShareService {
     /** Поточне посилання, якщо воно є; порожньо — якщо подорожжю ще не ділилися. */
     @Transactional(readOnly = true)
     public Optional<ShareLinkResponse> current(UUID userId, UUID tripId) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.VIEWER);
         return shareRepository.findByTripIdAndRevokedAtIsNull(tripId)
                 .map(s -> ShareLinkResponse.of(s.getToken(), s.getCreatedAt()));
     }
@@ -91,7 +96,7 @@ public class ShareService {
      */
     @Transactional
     public void revoke(UUID userId, UUID tripId) {
-        requireOwned(userId, tripId);
+        access.require(userId, tripId, TripRole.EDITOR);
         shareRepository.findByTripIdAndRevokedAtIsNull(tripId)
                 .ifPresent(s -> s.setRevokedAt(Instant.now()));
     }
@@ -147,10 +152,6 @@ public class ShareService {
         return new SharedTripResponse.Day(d.getDayIndex(), d.getDayDate(), km, walk, items);
     }
 
-    private Trip requireOwned(UUID userId, UUID tripId) {
-        return tripRepository.findByIdAndUserId(tripId, userId)
-                .orElseThrow(() -> new TripNotFoundException("Подорож не знайдено"));
-    }
 
     private static String newToken() {
         byte[] bytes = new byte[TOKEN_BYTES];

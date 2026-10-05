@@ -53,9 +53,9 @@ class PlanCompletedListenerIntegrationTest {
     @Test
     void completedEvent_writesItinerary_marksJobCompleted_andTripPlanned() throws Exception {
         UUID userId = UUID.randomUUID();
-        TripResponse trip = tripService.create(userId, new CreateTripRequest(
+        TripResponse trip = tripService.create(userId, "owner@waylo.test", new CreateTripRequest(
                 "Rome trip", "Rome", "IT", 41.9, 12.5, null,
-                LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-02")));
+                LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-02"), null));
         PlanJobResponse job = tripService.requestPlan(userId, trip.id());
 
         String placeA = UUID.randomUUID().toString();

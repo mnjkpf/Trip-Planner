@@ -3,6 +3,8 @@ package com.waylo.trip.export;
 import com.waylo.trip.domain.ItineraryItem;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripDay;
+import com.waylo.trip.access.TripAccess;
+import com.waylo.trip.domain.TripRole;
 import com.waylo.trip.domain.TripShare;
 import com.waylo.trip.error.ApiExceptions.TripNotFoundException;
 import com.waylo.trip.repository.ItineraryItemRepository;
@@ -30,22 +32,24 @@ public class CalendarService {
     private final TripShareRepository shareRepository;
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
+    private final TripAccess access;
 
     public CalendarService(TripRepository tripRepository,
                            TripShareRepository shareRepository,
                            TripDayRepository tripDayRepository,
-                           ItineraryItemRepository itineraryItemRepository) {
+                           ItineraryItemRepository itineraryItemRepository,
+                           TripAccess access) {
         this.tripRepository = tripRepository;
         this.shareRepository = shareRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
+        this.access = access;
     }
 
+    /** Будь-який учасник, включно з глядачем — календар нічого не змінює. */
     @Transactional(readOnly = true)
-    public IcsCalendar forOwner(UUID userId, UUID tripId) {
-        Trip trip = tripRepository.findByIdAndUserId(tripId, userId)
-                .orElseThrow(() -> new TripNotFoundException("Подорож не знайдено"));
-        return build(trip);
+    public IcsCalendar forMember(UUID userId, UUID tripId) {
+        return build(access.require(userId, tripId, TripRole.VIEWER));
     }
 
     @Transactional(readOnly = true)

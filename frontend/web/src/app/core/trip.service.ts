@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Budget,
+  InviteMemberRequest,
   BudgetRequest,
   CreateTripRequest,
   ExpenseRequest,
@@ -10,6 +11,7 @@ import {
   PlanJob,
   ShareLink,
   SharedTrip,
+  TripMember,
   TravelContext,
   Trip,
   UpdateTripRequest,
@@ -125,5 +127,22 @@ export class TripService {
 
   removeExpense(tripId: string, expenseId: string): Observable<Budget> {
     return this.http.delete<Budget>(`/api/trips/${tripId}/expenses/${expenseId}`);
+  }
+
+  // ── учасники (зміни складу повертають увесь список) ──
+  members(tripId: string): Observable<TripMember[]> {
+    return this.http.get<TripMember[]>(`/api/trips/${tripId}/members`);
+  }
+
+  invite(tripId: string, req: InviteMemberRequest): Observable<TripMember[]> {
+    return this.http.post<TripMember[]>(`/api/trips/${tripId}/members`, req);
+  }
+
+  changeRole(tripId: string, memberId: string, role: 'EDITOR' | 'VIEWER'): Observable<TripMember[]> {
+    return this.http.put<TripMember[]>(`/api/trips/${tripId}/members/${memberId}`, { role });
+  }
+
+  removeMember(tripId: string, memberId: string): Observable<void> {
+    return this.http.delete<void>(`/api/trips/${tripId}/members/${memberId}`);
   }
 }

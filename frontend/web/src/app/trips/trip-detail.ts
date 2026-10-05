@@ -6,6 +6,7 @@ import { clearOverlays, createMap, fit, loadMaps, numberedMarker, routeByRoads, 
 import { Observable, switchMap, take, takeWhile, timer } from 'rxjs';
 import { TripBudget } from './trip-budget';
 import { TripFlights } from './trip-flights';
+import { TripMembers } from './trip-members';
 import { TripHotels } from './trip-hotels';
 import { TripService } from '../core/trip.service';
 import { AuthService } from '../core/auth.service';
@@ -18,13 +19,14 @@ import {
   ShareLink,
   TravelContext,
   Trip,
+  TripRole,
   WishlistItem,
 } from '../core/models';
 import { preferenceChipKeys } from './plan-preferences-editor';
 
 @Component({
   selector: 'app-trip-detail',
-  imports: [DatePipe, RouterLink, TripHotels, TripFlights, TripBudget, TranslatePipe],
+  imports: [DatePipe, RouterLink, TripHotels, TripFlights, TripBudget, TripMembers, TranslatePipe],
   template: `
     @if (trip(); as t) {
       <div class="page">
@@ -51,12 +53,21 @@ import { preferenceChipKeys } from './plan-preferences-editor';
               <a class="btn btn-secondary btn-sm" [routerLink]="['/trips', t.id, 'print']" target="_blank">
                 {{ 'export.pdf' | translate }}
               </a>
-              <button class="btn btn-secondary btn-sm" (click)="toggleShare()">{{ 'share.btn' | translate }}</button>
+              @if (canEdit()) {
+                <button class="btn btn-secondary btn-sm" (click)="toggleShare()">{{ 'share.btn' | translate }}</button>
+              }
             }
-            @if (t.status !== 'PLANNING') {
+            @if (t.status !== 'PLANNING' && canEdit()) {
               <a class="btn btn-secondary btn-sm" [routerLink]="['/trips', t.id, 'edit']">{{ 'detail.edit_btn' | translate }}</a>
             }
-            @if (!confirmingDelete()) {
+            @if (isOwner()) {
+              <button class="btn btn-secondary btn-sm" (click)="membersOpen.set(!membersOpen())">
+                {{ 'members.btn' | translate }}
+              </button>
+            } @else {
+              <span class="role-chip">{{ 'members.role_' + role().toLowerCase() | translate }}</span>
+            }
+            @if (isOwner() && !confirmingDelete()) {
               <button class="btn btn-danger btn-sm" (click)="confirmingDelete.set(true)">{{ 'detail.delete_btn' | translate }}</button>
             } @else {
               <span class="confirm">
@@ -67,6 +78,12 @@ import { preferenceChipKeys } from './plan-preferences-editor';
             }
           </div>
         </div>
+
+        @if (membersOpen() || !isOwner()) {
+          <div class="section members-sec">
+            <app-trip-members [trip]="t" (left)="onLeft()" />
+          </div>
+        }
 
         @if (sharePanel()) {
           <div class="section share-sec">
@@ -98,7 +115,7 @@ import { preferenceChipKeys } from './plan-preferences-editor';
               {{ 'detail.not_planned_desc' | translate }}
               
             </p>
-            <button class="btn btn-primary" (click)="plan()" [disabled]="planning()">
+            <button class="btn btn-primary" (click)="plan()" [disabled]="planning() || !canEdit()">
               {{ planning() ? ('detail.planning' | translate) : ('detail.plan_btn' | translate) }}
             </button>
             @if (planning()) {
@@ -172,9 +189,11 @@ import { preferenceChipKeys } from './plan-preferences-editor';
                 </button>
               }
             </div>
-            <button class="btn btn-secondary btn-sm edit-toggle" (click)="toggleEdit()">
-              {{ edit() ? ('edit.toggle_done' | translate) : ('edit.toggle_edit' | translate) }}
-            </button>
+            @if (canEdit()) {
+              <button class="btn btn-secondary btn-sm edit-toggle" (click)="toggleEdit()">
+                {{ edit() ? ('edit.toggle_done' | translate) : ('edit.toggle_edit' | translate) }}
+              </button>
+            }
           </div>
 
           <div class="trip-split">
@@ -253,6 +272,11 @@ import { preferenceChipKeys } from './plan-preferences-editor';
     .d-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; padding: 20px 28px 16px; border-bottom: 2px solid var(--divider); }
     .d-title { margin: 8px 0 6px; }
     .d-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+    .role-chip {
+      align-self: center; background: var(--accent-100); color: var(--accent-800);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 8px;
+    }
+    .members-sec { display: block; }
     .share-sec { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
     .share-desc { margin: 0; font-size: 12px; }
     .share-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; width: 100%; }
@@ -355,6 +379,7 @@ export class TripDetail implements OnDestroy {
   ctx = signal<TravelContext | null>(null);
   planning = signal(false);
   sharePanel = signal(false);
+  membersOpen = signal(false);
   shareLink = signal<ShareLink | null>(null);
   shareBusy = signal(false);
   copied = signal(false);
@@ -672,6 +697,30 @@ export class TripDetail implements OnDestroy {
       next: () => this.tab.set('budget'),
       error: () => this.error.set(this.i18n.instant('budget.error')),
     });
+  }
+
+  /**
+   * Роль викликача. Якщо бекенд поля ще не віддає (стара версія trip-service),
+   * вважаємо OWNER: до появи учасників доступ до подорожі мав лише її автор,
+   * тож це і є правильна поведінка для перехідного стану — і UI не падає на
+   * undefined замість того, щоб просто не показати кілька кнопок.
+   */
+  role(): TripRole {
+    return this.trip()?.role ?? 'OWNER';
+  }
+
+  isOwner(): boolean {
+    return this.role() === 'OWNER';
+  }
+
+  /** Глядач не редагує нічого: ні подорож, ні маршрут, ні бюджет. */
+  canEdit(): boolean {
+    return this.role() !== 'VIEWER';
+  }
+
+  /** Сам вийшов зі спільної подорожі — доступу більше немає, вертаємось до списку. */
+  onLeft(): void {
+    this.router.navigate(['/trips']);
   }
 
   // ── публічне посилання ──

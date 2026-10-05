@@ -48,6 +48,8 @@ app:
     batch-size: 100
   services:
     place-uri: ${SVC_PLACE_URI:http://localhost:8082}
+    # Потрібен лише для запрошення учасників: шукаємо userId за поштою.
+    user-uri: ${SVC_USER_URI:http://localhost:8081}
   topics:
     plan-completed: trip.plan.completed
 

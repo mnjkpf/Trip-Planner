@@ -45,9 +45,9 @@ class OutboxPublisherIntegrationTest {
     @Test
     void publishBatch_sendsPendingEventToKafka_andMarksPublished() {
         UUID userId = UUID.randomUUID();
-        TripResponse trip = tripService.create(userId, new CreateTripRequest(
+        TripResponse trip = tripService.create(userId, "owner@waylo.test", new CreateTripRequest(
                 "Kafka trip", "Rome", "IT", 41.9, 12.5, null,
-                LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-07")));
+                LocalDate.parse("2026-10-01"), LocalDate.parse("2026-10-07"), null));
         PlanJobResponse job = tripService.requestPlan(userId, trip.id());
         assertNotNull(job.jobId());
 

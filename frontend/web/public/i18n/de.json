@@ -369,5 +369,21 @@
     "cat_activity": "Aktivitäten",
     "cat_shopping": "Shopping",
     "cat_other": "Sonstiges"
+  },
+  "members": {
+    "btn": "Personen",
+    "title": "Wer hat Zugriff",
+    "email": "E-Mail",
+    "invite": "Einladen",
+    "hint": "Die Person braucht bereits ein Waylo-Konto.",
+    "role_owner": "Besitzer",
+    "role_editor": "Bearbeiter",
+    "role_viewer": "Betrachter",
+    "you": "du",
+    "leave": "Verlassen",
+    "unknown_email": "keine E-Mail",
+    "not_found": "Kein Konto mit dieser E-Mail",
+    "already": "Diese Person hat bereits Zugriff",
+    "error": "Zugriff konnte nicht aktualisiert werden"
   }
 }

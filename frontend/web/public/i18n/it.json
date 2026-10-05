@@ -369,5 +369,21 @@
     "cat_activity": "Attività",
     "cat_shopping": "Shopping",
     "cat_other": "Altro"
+  },
+  "members": {
+    "btn": "Persone",
+    "title": "Chi ha accesso",
+    "email": "Email",
+    "invite": "Invita",
+    "hint": "La persona deve già avere un account Waylo.",
+    "role_owner": "Proprietario",
+    "role_editor": "Editor",
+    "role_viewer": "Lettore",
+    "you": "tu",
+    "leave": "Esci",
+    "unknown_email": "nessuna email",
+    "not_found": "Nessun account con questa email",
+    "already": "Questa persona ha già accesso",
+    "error": "Impossibile aggiornare l'accesso"
   }
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,6 +18,7 @@ import com.waylo.user.dto.AuthResponse;
 import com.waylo.user.dto.ChangePasswordRequest;
 import com.waylo.user.dto.RegisterRequest;
 import com.waylo.user.dto.UpdateProfileRequest;
+import com.waylo.user.dto.UserLookupResponse;
 import com.waylo.user.dto.UserResponse;
 import com.waylo.user.service.AuthService;
 import com.waylo.user.service.UserService;
@@ -40,6 +42,15 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest req) {
         return authService.register(req);
+    }
+
+    /**
+     * Пошук за поштою — ним користується trip-service, коли запрошують учасника.
+     * Шлях під /api/user/**, тож gateway вимагає валідний токен.
+     */
+    @GetMapping("/lookup")
+    public UserLookupResponse lookup(@RequestParam String email) {
+        return userService.lookupByEmail(email);
     }
 
     /** Профіль поточного користувача; X-User-Id ставить gateway з JWT. */
