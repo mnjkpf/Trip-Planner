@@ -1,4 +1,4 @@
-# Локальний стек Travel Planner.
+# Локальний стек Waylo.
 #
 #   Розробка з IDE (тільки інфра):     docker compose up -d
 #   Повний стек у контейнерах:         docker compose --profile full up -d --build
@@ -12,13 +12,13 @@
 # Health-check'и: кожен app-сервіс має перевірку порту, а залежності чекають service_healthy —
 # тож `up` завершується, коли сервіси реально приймають запити (без гонки готовності).
 
-name: travel-planner
+name: waylo
 
 services:
 
   postgres:
     image: postgis/postgis:17-3.5
-    container_name: tp-postgres
+    container_name: waylo-postgres
     environment:
       POSTGRES_USER: tp
       POSTGRES_PASSWORD: tp
@@ -37,7 +37,7 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: tp-redis
+    container_name: waylo-redis
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
     ports:
       - "6379:6379"
@@ -51,7 +51,7 @@ services:
 
   kafka:
     image: apache/kafka:4.0.0
-    container_name: tp-kafka
+    container_name: waylo-kafka
     ports:
       - "29092:29092"
     environment:
@@ -81,7 +81,7 @@ services:
 
   kafka-ui:
     image: kafbat/kafka-ui:latest
-    container_name: tp-kafka-ui
+    container_name: waylo-kafka-ui
     depends_on:
       kafka:
         condition: service_healthy
@@ -94,7 +94,7 @@ services:
 
   lgtm:
     image: grafana/otel-lgtm:latest
-    container_name: tp-lgtm
+    container_name: waylo-lgtm
     profiles: ["full"]
     ports:
       - "3000:3000"
@@ -108,13 +108,15 @@ services:
   user-service:
     build:
       context: ./user-service
-    image: travel-planner/user-service
-    container_name: tp-user
+    image: waylo/user-service
+    container_name: waylo-user
     profiles: ["full"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
+      # Web OAuth Client ID для перевірки Google ID-токенів; порожній → фіча вимкнена
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -137,8 +139,8 @@ services:
   place-service:
     build:
       context: ./place-service
-    image: travel-planner/place-service
-    container_name: tp-place
+    image: waylo/place-service
+    container_name: waylo-place
     profiles: ["full"]
     depends_on:
       postgres:
@@ -171,8 +173,8 @@ services:
   trip-service:
     build:
       context: ./trip-service
-    image: travel-planner/trip-service
-    container_name: tp-trip
+    image: waylo/trip-service
+    container_name: waylo-trip
     profiles: ["full"]
     depends_on:
       postgres:
@@ -202,8 +204,8 @@ services:
   context-service:
     build:
       context: ./context-service
-    image: travel-planner/context-service
-    container_name: tp-context
+    image: waylo/context-service
+    container_name: waylo-context
     profiles: ["full"]
     depends_on:
       postgres:
@@ -234,8 +236,8 @@ services:
   planner-service:
     build:
       context: ./planner-service
-    image: travel-planner/planner-service
-    container_name: tp-planner
+    image: waylo/planner-service
+    container_name: waylo-planner
     profiles: ["full"]
     depends_on:
       redis:
@@ -263,11 +265,36 @@ services:
       retries: 24
       start_period: 30s
 
+  offer-service:
+    build:
+      context: ./offer-service
+    image: waylo/offer-service
+    container_name: waylo-offer
+    profiles: ["full"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Ключ SerpAPI (100 пошуків/міс безкоштовно); порожній → ендпоінти повертають 503
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      SERPAPI_DEFAULT_CURRENCY: ${SERPAPI_DEFAULT_CURRENCY:-EUR}
+    ports:
+      - "8087:8087"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8087' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
   api-gateway:
     build:
       context: ./api-gateway
-    image: travel-planner/api-gateway
-    container_name: tp-gateway
+    image: waylo/api-gateway
+    container_name: waylo-gateway
     profiles: ["full"]
     depends_on:
       user-service:
@@ -278,6 +305,8 @@ services:
         condition: service_healthy
       context-service:
         condition: service_healthy
+      offer-service:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_JSON: '{"management.opentelemetry.enabled":true,"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
       OTEL_SDK_DISABLED: "false"
@@ -285,6 +314,7 @@ services:
       SVC_PLACE_URI: http://place-service:8082
       SVC_TRIP_URI: http://trip-service:8083
       SVC_CONTEXT_URI: http://context-service:8084
+      SVC_OFFER_URI: http://offer-service:8087
       JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -298,8 +328,39 @@ services:
       retries: 24
       start_period: 30s
 
+  frontend-dev:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile.dev
+    image: waylo/frontend-dev
+    container_name: waylo-frontend
+    profiles: ["dev"]
+    # Жодного depends_on на api-gateway: він у профілі "full", а compose при
+    # `--profile dev` його не бачить. Ти тримаєш `full` піднятим окремо; якщо
+    # gateway ще не стартував — proxy /api просто поверне помилку, а hot-reload
+    # у фронті продовжить працювати.
+    environment:
+      # ng serve звертається до бекенду через docker DNS
+      TZ: Europe/Kyiv
+    volumes:
+      # bind-mount: редагуєш у Windows, hot-reload у контейнері підхоплює
+      # node_modules лишаємо з образу (named volume), щоб хост не затирав
+      - ./frontend/web/src:/app/src
+      - ./frontend/web/public:/app/public
+      - ./frontend/web/angular.json:/app/angular.json
+      - ./frontend/web/tsconfig.json:/app/tsconfig.json
+      - ./frontend/web/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/web/tsconfig.spec.json:/app/tsconfig.spec.json
+      - ./frontend/web/proxy.conf.docker.json:/app/proxy.conf.docker.json
+    ports:
+      - "4200:4200"
+    stop_grace_period: 5s
+
 volumes:
   pgdata:
+    # Явне ім'я, бо інакше перейменування проєкту (name: waylo) створило б
+    # НОВИЙ volume waylo_pgdata, а всі подорожі лишились би в старому.
+    name: travel-planner_pgdata
   redisdata:
   kafkadata:
   lgtmdata:
