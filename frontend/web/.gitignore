@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Google Maps key — свій локальний environment.ts не комітимо
+/src/environments/environment.ts

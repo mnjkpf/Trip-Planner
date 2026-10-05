@@ -1,0 +1,12 @@
+{
+  "/api": {
+    "target": "http://api-gateway:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/.well-known": {
+    "target": "http://api-gateway:8080",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

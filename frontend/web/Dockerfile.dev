@@ -1,0 +1,25 @@
+# Dev-контейнер для фронту: обхід Windows Smart App Control, що блокує нативні
+# .node-бінарі (oxc-parser). У Linux-контейнері цієї політики немає.
+#
+# Запуск: docker compose --profile dev up -d frontend-dev
+# ng serve живе на 4200, hot-reload працює через bind-mount з хоста.
+#
+# npm install виконуємо один раз під час побудови образу — не всередині mounted
+# volume (так швидше й стабільніше).
+FROM node:22-alpine
+
+WORKDIR /app
+# Копіюємо тільки lockfile+package.json → npm install кешується на образі
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Решта коду прийде через bind-mount (див. docker-compose.yml → volumes).
+# POLL — надійний file-watch через Windows↔WSL↔Container, трохи повільніший
+# за inotify, але не губить події; альтернатива — ламкий inotify.
+ENV CHOKIDAR_USEPOLLING=true
+ENV WATCHPACK_POLLING=true
+
+EXPOSE 4200
+# --host 0.0.0.0 щоб порт був досяжний з хоста
+# --poll 1000 — Angular dev-server тікер для polling на 1с
+CMD ["npx", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "1000", "--proxy-config", "proxy.conf.docker.json"]

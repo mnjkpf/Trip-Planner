@@ -1,111 +1,128 @@
 import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import * as L from 'leaflet';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { createMap, dotMarker, loadMaps } from '../core/map';
 import { PlaceService } from '../core/place.service';
 import { WishlistService } from '../core/wishlist.service';
 import { Place } from '../core/models';
 
 @Component({
   selector: 'app-place-detail',
-  imports: [RouterLink, DecimalPipe],
+  imports: [RouterLink, DecimalPipe, TranslatePipe],
   template: `
-    <a class="back" routerLink="/places">← До пошуку</a>
-
-    @if (place(); as p) {
-      <div class="card place-detail">
-        <div class="pd-head">
-          <span class="badge cat-badge">{{ label(p.category) }}</span>
-          @if (wishlist.savedIds().has(p.id)) {
-            <button class="btn-sm danger" (click)="toggleSave(p)">♥ У вішлісті — прибрати</button>
-          } @else {
-            <button class="btn-sm" (click)="toggleSave(p)">♡ Зберегти у вішліст</button>
-          }
-        </div>
-        <h1>{{ p.name }}</h1>
-        @if (p.imageUrl) {
-          <img class="hero" [src]="p.imageUrl" [alt]="p.name" />
+    <div class="page">
+      <div class="pd-head">
+        <a class="back" routerLink="/places">{{ 'places.back_to_search' | translate }}</a>
+        @if (place(); as p) {
+          <div class="pd-head-row">
+            <div class="grow">
+              <span class="tag tag-accent">{{ label(p.category) }}</span>
+              <h1 class="pd-title">{{ p.name }}</h1>
+            </div>
+            <div class="pd-actions">
+              @if (wishlist.savedIds().has(p.id)) {
+                <button class="btn btn-danger btn-sm" (click)="toggleSave(p)">{{ 'places.in_wishlist' | translate }}</button>
+              } @else {
+                <button class="btn btn-secondary btn-sm" (click)="toggleSave(p)">{{ 'places.save' | translate }}</button>
+              }
+            </div>
+          </div>
         }
-        @if (p.description) { <p class="lead">{{ p.description }}</p> }
-        <dl class="facts">
-          @if (p.address) { <div><dt>Адреса</dt><dd>{{ p.address }}</dd></div> }
-          @if (p.city) {
-            <div><dt>Місто</dt><dd>{{ p.city }}@if (p.countryCode) { , {{ p.countryCode }} }</dd></div>
-          }
-          <div><dt>Координати</dt><dd>{{ p.lat | number: '1.4-4' }}, {{ p.lon | number: '1.4-4' }}</dd></div>
-          @if (p.website) {
-            <div><dt>Сайт</dt><dd><a [href]="p.website" target="_blank" rel="noopener">{{ p.website }} ↗</a></dd></div>
-          }
-        </dl>
       </div>
-      <div #mapEl class="map map-sm"></div>
-    } @else if (error()) {
-      <div class="card empty">Місце не знайдено.</div>
-    } @else {
-      <p class="muted">Завантаження…</p>
-    }
+
+      @if (place(); as p) {
+        <div class="pd-body">
+          <div class="pd-left">
+            @if (p.imageUrl) { <img class="pd-hero" [src]="p.imageUrl" [alt]="p.name" /> }
+            @if (p.description) { <p class="pd-lead">{{ p.description }}</p> }
+            <table class="table pd-facts">
+              <tbody>
+                @if (p.address) { <tr><th>{{ 'places.address' | translate }}</th><td>{{ p.address }}</td></tr> }
+                @if (p.city) { <tr><th>{{ 'places.city' | translate }}</th><td>{{ p.city }}@if (p.countryCode) { , {{ p.countryCode }} }</td></tr> }
+                <tr><th>{{ 'places.coords' | translate }}</th><td class="mono">{{ p.lat | number: '1.4-4' }}, {{ p.lon | number: '1.4-4' }}</td></tr>
+                @if (p.website) { <tr><th>{{ 'places.website' | translate }}</th><td><a [href]="p.website" target="_blank" rel="noopener">{{ p.website }} ↗</a></td></tr> }
+              </tbody>
+            </table>
+            <div class="box pd-provider">
+              <div class="box-title accent">{{ 'places.source' | translate }}</div>
+              <div class="mono pd-pline">{{ 'places.source_line' | translate }}</div>
+            </div>
+          </div>
+          <div class="pd-right"><div #mapEl class="map-fill-r"></div></div>
+        </div>
+      } @else if (error()) {
+        <div class="section"><div class="empty">{{ 'places.not_found_full' | translate }}</div></div>
+      } @else {
+        <div class="section"><p class="muted">{{ 'common.loading' | translate }}</p></div>
+      }
+    </div>
   `,
+  styles: [`
+    .pd-head { padding: 20px 28px 16px; border-bottom: 2px solid var(--divider); }
+    .pd-head-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-top: 10px; }
+    .pd-title { margin: 8px 0 0; }
+    .pd-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pd-body { display: flex; flex-wrap: wrap; }
+    .pd-left { flex: 1 1 380px; min-width: 300px; padding: 24px 28px; border-right: 2px solid var(--divider); }
+    .pd-hero { width: 100%; max-height: 300px; object-fit: cover; margin-bottom: 18px; filter: grayscale(0.1); }
+    .pd-lead { font-size: 16px; line-height: 1.6; margin: 0 0 20px; max-width: 52ch; }
+    .pd-facts th { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--muted); width: 34%; }
+    .pd-facts a { word-break: break-all; }
+    .pd-provider { margin-top: 20px; }
+    .box-title.accent { color: var(--accent); }
+    .pd-pline { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .pd-right { flex: 1 1 300px; min-width: 280px; display: flex; }
+    .map-fill-r { flex: 1; min-height: 340px; background: var(--surface); }
+  `],
 })
 export class PlaceDetail implements OnDestroy {
   private route = inject(ActivatedRoute);
   private placesApi = inject(PlaceService);
   protected wishlist = inject(WishlistService);
   private mapEl = viewChild<ElementRef<HTMLDivElement>>('mapEl');
-  private map?: L.Map;
+  private map: google.maps.Map | null = null;
 
   place = signal<Place | null>(null);
   error = signal(false);
 
-  private readonly labels: Record<string, string> = {
-    HOTEL: 'Готель', RESTAURANT: 'Ресторан', CAFE: 'Кафе', BAR: 'Бар',
-    MUSEUM: 'Музей', ATTRACTION: 'Памʼятка', PARK: 'Парк', BEACH: 'Пляж',
-    SHOP: 'Магазин', OTHER: 'Інше',
-  };
+  private i18n = inject(TranslateService);
 
   constructor() {
-    this.wishlist.load(); // щоб знати, чи місце вже у вішлісті
+    this.wishlist.load();
     const id = this.route.snapshot.paramMap.get('id')!;
     this.placesApi.get(id).subscribe({
       next: (p) => {
         this.place.set(p);
-        // даємо Angular відрендерити #mapEl (він у @if), потім ініціалізуємо карту
         setTimeout(() => this.initMap(p), 0);
       },
       error: () => this.error.set(true),
     });
   }
 
-  label(c: string): string {
-    return this.labels[c] ?? c;
-  }
+  label(c: string): string { return this.i18n.instant('category.' + c) || c; }
 
   toggleSave(p: Place): void {
     if (this.wishlist.savedIds().has(p.id)) {
       this.wishlist.remove(p.id).subscribe();
     } else {
-      this.wishlist
-        .add({ placeId: p.id, placeName: p.name, placeLat: p.lat, placeLon: p.lon })
-        .subscribe();
+      this.wishlist.add({ placeId: p.id, placeName: p.name, placeLat: p.lat, placeLon: p.lon }).subscribe();
     }
   }
 
-  private initMap(p: Place): void {
+  private async initMap(p: Place): Promise<void> {
     const el = this.mapEl()?.nativeElement;
-    if (!el || this.map) {
+    if (!el || this.map) return;
+    try {
+      await loadMaps();
+    } catch {
       return;
     }
-    this.map = L.map(el).setView([p.lat, p.lon], 15);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(this.map);
-    L.circleMarker([p.lat, p.lon], {
-      radius: 9, color: '#1d4ed8', weight: 2, fillColor: '#3b82f6', fillOpacity: 0.85,
-    }).addTo(this.map);
-    setTimeout(() => this.map?.invalidateSize(), 0);
+    this.map = createMap(el, { lat: p.lat, lng: p.lon }, 15);
+    dotMarker(this.map, { lat: p.lat, lng: p.lon }, p.name);
   }
 
   ngOnDestroy(): void {
-    this.map?.remove();
+    /* google.maps сам прибирає ресурси, коли вузол зникає з DOM */
   }
 }

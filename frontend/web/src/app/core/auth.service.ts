@@ -32,6 +32,13 @@ export class AuthService {
       .pipe(tap((r) => this.store(r.accessToken)));
   }
 
+  /** Обмінює Google ID-token на наш JWT (бекенд перевіряє підпис Google). */
+  loginWithGoogle(idToken: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>('/api/auth/google', { idToken })
+      .pipe(tap((r) => this.store(r.accessToken)));
+  }
+
   logout(): void {
     this.tokenSig.set(null);
     try {

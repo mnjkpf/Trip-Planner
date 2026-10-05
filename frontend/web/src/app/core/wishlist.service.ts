@@ -47,7 +47,7 @@ export class WishlistService {
   }
 
   remove(placeId: string): Observable<void> {
-    return this.http.delete<void>(`/api/wishlist/${placeId}`).pipe(
+    return this.http.delete<void>(`/api/wishlist/${encodeURIComponent(placeId)}`).pipe(
       tap(() => this._items.update((list) => list.filter((i) => i.placeId !== placeId))),
     );
   }

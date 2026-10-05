@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "waylo-web",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -17,7 +17,8 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
-    "leaflet": "^1.9.4",
+    "@ngx-translate/core": "^17.0.0",
+    "@ngx-translate/http-loader": "^17.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -25,7 +26,8 @@
     "@angular/build": "^22.2.0",
     "@angular/cli": "^22.2.0",
     "@angular/compiler-cli": "^22.2.0",
-    "@types/leaflet": "^1.9.22",
+    "@oxc-parser/binding-wasm32-wasi": "^0.152.0",
+    "@types/google.maps": "^3.66.4",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
