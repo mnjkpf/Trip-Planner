@@ -1,0 +1,422 @@
+# Локальний стек Waylo.
+#
+#   Розробка з IDE (тільки інфра):     docker compose up -d
+#   Повний стек у контейнерах:         docker compose --profile full up -d --build
+#     (зміну лише env — без --build:    docker compose --profile full up -d)
+#   Зупинити / знести з даними:        docker compose --profile full down [-v]
+#
+# Порти на хості: gateway 8080, user 8081, place 8082, trip 8083, context 8084,
+#                 kafka-ui 8085, planner 8086, offer 8087, media 8088, Grafana 3000,
+#                 kafka 29092, postgres 5432, redis 6379, S3 9000 (переглядач 8888).
+#
+# Спостережуваність: усі сервіси шлють трейси/метрики по OTLP у LGTM (Tempo+Prometheus+Grafana).
+# Health-check'и: кожен app-сервіс має перевірку порту, а залежності чекають service_healthy —
+# тож `up` завершується, коли сервіси реально приймають запити (без гонки готовності).
+
+name: waylo
+
+services:
+
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: waylo-postgres
+    environment:
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      POSTGRES_DB: postgres
+      TP_DATABASES: userdb,placedb,tripdb,contextdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tp -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: waylo-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Обʼєктне сховище для фото — S3-сумісне. SeaweedFS, а не MinIO: у вересні 2026
+  # MinIO прибрав публічні образи і з Docker Hub, і з анонімного quay.io. Для коду
+  # різниці немає — media-service говорить з ним звичайним S3 через ObjectStore.
+  #
+  # Healthcheck свідомо немає: media-service сам чекає на бакет із повторами,
+  # тож гонка старту вирішена в коді, а не в compose.
+  #   :9000 — S3 API, :8888 — файловий переглядач (зручно глянути, що залилось).
+  objects:
+    image: chrislusf/seaweedfs:latest
+    container_name: waylo-objects
+    command: ["server", "-dir=/data", "-master.volumeSizeLimitMB=1024",
+              "-s3", "-s3.port=9000", "-s3.config=/etc/seaweedfs/s3.json"]
+    ports:
+      - "9000:9000"
+      - "8888:8888"
+    volumes:
+      - objectsdata:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: waylo-kafka
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    container_name: waylo-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: waylo-lgtm
+    profiles: ["full"]
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - lgtmdata:/data
+
+  # ---- Застосунки (профіль full). Кожен має healthcheck; залежності чекають healthy. ----
+
+  user-service:
+    build:
+      context: ./user-service
+    image: waylo/user-service
+    container_name: waylo-user
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Web OAuth Client ID для перевірки Google ID-токенів; порожній → фіча вимкнена
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      JWT_PRIVATE_KEY_LOCATION: file:/app/infra/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/app/infra/keys/jwt-public.pem
+    volumes:
+      - ./infra/keys:/app/infra/keys:ro
+    ports:
+      - "8081:8081"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8081' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  place-service:
+    build:
+      context: ./place-service
+    image: waylo/place-service
+    container_name: waylo-place
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Ключ Geoapify для фото/POI; порожній → зовнішні виклики пропускаються
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
+    ports:
+      - "8082:8082"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8082' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  trip-service:
+    build:
+      context: ./trip-service
+    image: waylo/trip-service
+    container_name: waylo-trip
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      place-service:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_USER_URI: http://user-service:8081
+      SVC_MEDIA_URI: http://media-service:8088
+    ports:
+      - "8083:8083"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8083' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  context-service:
+    build:
+      context: ./context-service
+    image: waylo/context-service
+    container_name: waylo-context
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8084:8084"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8084' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  planner-service:
+    build:
+      context: ./planner-service
+    image: waylo/planner-service
+    container_name: waylo-planner
+    profiles: ["full"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      place-service:
+        condition: service_healthy
+      context-service:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_CONTEXT_URI: http://context-service:8084
+    ports:
+      - "8086:8086"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8086' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  offer-service:
+    build:
+      context: ./offer-service
+    image: waylo/offer-service
+    container_name: waylo-offer
+    profiles: ["full"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Ключ SerpAPI (100 пошуків/міс безкоштовно); порожній → ендпоінти повертають 503
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      SERPAPI_DEFAULT_CURRENCY: ${SERPAPI_DEFAULT_CURRENCY:-EUR}
+    ports:
+      - "8087:8087"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8087' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  media-service:
+    build:
+      context: ./media-service
+    image: waylo/media-service
+    container_name: waylo-media
+    profiles: ["full"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      objects:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics","spring.kafka.template.observation-enabled":true,"spring.kafka.listener.observation-enabled":true}'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      S3_ENDPOINT: http://objects:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-waylo}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-waylo-local-secret}
+    ports:
+      - "8088:8088"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8088' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: waylo/api-gateway
+    container_name: waylo-gateway
+    profiles: ["full"]
+    depends_on:
+      user-service:
+        condition: service_healthy
+      place-service:
+        condition: service_healthy
+      trip-service:
+        condition: service_healthy
+      context-service:
+        condition: service_healthy
+      offer-service:
+        condition: service_healthy
+      media-service:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_JSON: '{"management.opentelemetry.enabled":true,"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
+      OTEL_SDK_DISABLED: "false"
+      SVC_USER_URI: http://user-service:8081
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_TRIP_URI: http://trip-service:8083
+      SVC_CONTEXT_URI: http://context-service:8084
+      SVC_OFFER_URI: http://offer-service:8087
+      SVC_MEDIA_URI: http://media-service:8088
+      JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # Перевіряємо, що HTTP-порт слухає (без curl в образі — через /dev/tcp bash).
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
+
+  frontend-dev:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile.dev
+    image: waylo/frontend-dev
+    container_name: waylo-frontend
+    profiles: ["dev"]
+    # Жодного depends_on на api-gateway: він у профілі "full", а compose при
+    # `--profile dev` його не бачить. Ти тримаєш `full` піднятим окремо; якщо
+    # gateway ще не стартував — proxy /api просто поверне помилку, а hot-reload
+    # у фронті продовжить працювати.
+    environment:
+      # ng serve звертається до бекенду через docker DNS
+      TZ: Europe/Kyiv
+    volumes:
+      # bind-mount: редагуєш у Windows, hot-reload у контейнері підхоплює
+      # node_modules лишаємо з образу (named volume), щоб хост не затирав
+      - ./frontend/web/src:/app/src
+      - ./frontend/web/public:/app/public
+      - ./frontend/web/angular.json:/app/angular.json
+      - ./frontend/web/tsconfig.json:/app/tsconfig.json
+      - ./frontend/web/tsconfig.app.json:/app/tsconfig.app.json
+      - ./frontend/web/tsconfig.spec.json:/app/tsconfig.spec.json
+      - ./frontend/web/proxy.conf.docker.json:/app/proxy.conf.docker.json
+    ports:
+      - "4200:4200"
+    stop_grace_period: 5s
+
+volumes:
+  objectsdata:
+  pgdata:
+    # Явне ім'я, бо інакше перейменування проєкту (name: waylo) створило б
+    # НОВИЙ volume waylo_pgdata, а всі подорожі лишились би в старому.
+    name: travel-planner_pgdata
+  redisdata:
+  kafkadata:
+  lgtmdata:

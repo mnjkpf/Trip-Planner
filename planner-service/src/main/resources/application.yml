@@ -1,0 +1,43 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: planner-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: planner-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+
+app:
+  services:
+    place-uri: ${SVC_PLACE_URI:http://localhost:8082}
+    context-uri: ${SVC_CONTEXT_URI:http://localhost:8084}
+  topics:
+    plan-requested: trip.plan.requested
+    plan-completed: trip.plan.completed
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

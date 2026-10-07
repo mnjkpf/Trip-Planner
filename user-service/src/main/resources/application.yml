@@ -1,0 +1,53 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  threads:
+    virtual:
+      enabled: true          # Java 21 — паралельність без реактивщини
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/userdb
+    username: ${POSTGRES_USER:tp}
+    password: ${POSTGRES_PASSWORD:tp}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate     # схему веде ТІЛЬКИ Flyway, ніколи не update
+    open-in-view: false
+    properties:
+      hibernate.jdbc.batch_size: 25
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    issuer: ${JWT_ISSUER:http://localhost:8081}
+    # Шляхи до ключів. Відносний file: резолвиться від РОБОЧОЇ ТЕКИ.
+    # Запускай сервіс із робочою текою = корінь репо (D:\Trip-Planner),
+    # або задай абсолютні шляхи через змінні оточення.
+    private-key-location: ${JWT_PRIVATE_KEY_LOCATION:file:infra/keys/jwt-private.pem}
+    public-key-location: ${JWT_PUBLIC_KEY_LOCATION:file:infra/keys/jwt-public.pem}
+    access-ttl: ${JWT_ACCESS_TTL:30m}
+    refresh-ttl: ${JWT_REFRESH_TTL:14d}
+    key-id: waylo-key      # kid — той самий у токені й у JWKS
+  oauth:
+    google:
+      # Web OAuth 2.0 Client ID з Google Cloud Console. Порожній → ендпоінт
+      # /api/auth/google повертає 503 (фіча вимкнена), решта входу працює.
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

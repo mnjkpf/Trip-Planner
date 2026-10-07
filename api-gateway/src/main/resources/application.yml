@@ -1,0 +1,133 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Єдина точка входу. Роути проксі-проходять ПОВНИЙ шлях /api/**
+  # (StripPrefix не потрібен — downstream-контролери мапляться на /api/...).
+  # Префікс саме spring.cloud.gateway.server.webflux.* — це SCG 5.x на Boot 4;
+  # старий spring.cloud.gateway.routes у цій версії тихо не біндиться.
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # Rate-limiting через Redis (token bucket). Ключ — користувач (JWT sub)
+          # або IP для анонімних; перевищення -> 429.
+          #
+          # Лімітер стоїть НЕ в default-filters, а на кожному роуті окремо. Так
+          # зроблено заради медіа: одна сторінка галереї — це десятки запитів за
+          # картинками, і зі спільним бакетом вони з'їдали б ліміт усього API.
+          # Бакет у Redis адресується ключем, тому в медіа-роуті свій резолвер
+          # (префікс "media:") — інакше різні ставки билися б за один лічильник.
+          routes:
+            - id: user-service
+              uri: ${SVC_USER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/user/**,/.well-known/jwks.json
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            - id: place-service
+              uri: ${SVC_PLACE_URI:http://localhost:8082}
+              predicates:
+                - Path=/api/places/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            # Публічний перегляд маршруту за посиланням — анонімний вхід, тому
+            # окремий роут: у метриках gateway видно його трафік окремо від
+            # приватного. Ліміт звичайний: гість за посиланням робить кілька
+            # запитів, а перебір токена не загроза — у ньому 256 біт ентропії.
+            - id: trip-service-public
+              uri: ${SVC_TRIP_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/public/trips/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            - id: trip-service
+              uri: ${SVC_TRIP_URI:http://localhost:8083}
+              predicates:
+                - Path=/api/trips/**,/api/wishlist/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            - id: context-service
+              uri: ${SVC_CONTEXT_URI:http://localhost:8084}
+              predicates:
+                - Path=/api/context/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            - id: offer-service
+              uri: ${SVC_OFFER_URI:http://localhost:8087}
+              predicates:
+                - Path=/api/flights/**,/api/hotels/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
+            # Фото. Ліміт свій і щедрий: одна галерея — це десятки GET за
+            # мініатюрами. Віддача кешується назавжди (immutable), тож повторні
+            # відкриття сторінки в бакет узагалі не стукають.
+            - id: media-service
+              uri: ${SVC_MEDIA_URI:http://localhost:8088}
+              predicates:
+                - Path=/api/media/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 60
+                    redis-rate-limiter.burstCapacity: 180
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@mediaKeyResolver}"
+
+  # Gateway = OAuth2 resource server. Валідує RS256-токени від user-service
+  # по публічних ключах з JWKS (kid waylo-key). Ключі не тримаємо тут.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# OTel-старт є в classpath, але колектор ще не піднято (окремий крок Observability).
+# Поки вимикаємо SDK за замовчуванням, щоб не спамити помилками експорту.
+otel:
+  sdk:
+    disabled: ${OTEL_SDK_DISABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway

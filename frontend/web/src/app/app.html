@@ -1,0 +1,50 @@
+@if (auth.isLoggedIn()) {
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <a class="brand" routerLink="/trips">WAY<span>/</span>LO</a>
+        <div class="sb-tag">{{ 'app.subtitle' | translate }}</div>
+      </div>
+
+      <nav class="sb-nav">
+        <a routerLink="/trips" routerLinkActive="on">{{ 'nav.trips' | translate }}</a>
+        <a routerLink="/places" routerLinkActive="on">{{ 'nav.places' | translate }}</a>
+        <a routerLink="/wishlist" routerLinkActive="on">
+          {{ 'nav.wishlist' | translate }}<span class="count">{{ wishlist.savedIds().size }}</span>
+        </a>
+      </nav>
+
+      <div class="sb-log">
+        <div class="kicker">{{ 'nav.journal' | translate }}</div>
+        <div class="log-lines">
+          @for (l of log.lines(); track $index) {
+            <div class="log-line"><span class="tick">▸</span><span>{{ l }}</span></div>
+          } @empty {
+            <div class="log-line muted">…</div>
+          }
+        </div>
+      </div>
+
+      <div class="sb-lang">
+        <label class="kicker">{{ 'nav.language' | translate }}</label>
+        <select class="lang-select" [value]="lang.current()" (change)="onLangChange($event)">
+          @for (l of lang.langs; track l.code) {
+            <option [value]="l.code">{{ l.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="sb-user">
+        <a class="user-row" routerLink="/profile" routerLinkActive="on">
+          <span class="avatar">TP</span>
+          <span class="uname">{{ 'profile.title' | translate }}</span>
+        </a>
+        <button class="sb-logout" (click)="logout()">{{ 'nav.logout' | translate }}</button>
+      </div>
+    </aside>
+
+    <main class="main"><router-outlet /></main>
+  </div>
+} @else {
+  <main class="auth-main"><router-outlet /></main>
+}

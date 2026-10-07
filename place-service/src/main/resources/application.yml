@@ -1,0 +1,64 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: place-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/placedb
+    username: ${POSTGRES_USER:tp}
+    password: ${POSTGRES_PASSWORD:tp}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate     # схему веде ТІЛЬКИ Flyway
+    open-in-view: false
+    properties:
+      hibernate.jdbc.batch_size: 50
+      # Діалект PostGIS підхоплюється автоматично, коли hibernate-spatial
+      # у classpath — явно вказувати не треба.
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+app:
+  providers:
+    geoapify:
+      base-url: ${GEOAPIFY_BASE_URL:https://api.geoapify.com/v2}
+      api-key: ${GEOAPIFY_API_KEY:}
+      geocode-base-url: ${GEOAPIFY_GEOCODE_BASE_URL:https://api.geoapify.com/v1}
+    wikipedia:
+      base-url: ${WIKIPEDIA_BASE_URL:https://en.wikipedia.org/api/rest_v1}
+      # Пошук статті за назвою + містом, коли точного заголовка немає.
+      search-url: ${WIKIPEDIA_SEARCH_URL:https://en.wikipedia.org/w}
+      user-agent: ${WIKIPEDIA_USER_AGENT:Waylo/1.0 (portfolio pet project)}
+  search:
+    default-radius-meters: 2000
+    max-radius-meters: 50000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

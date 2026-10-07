@@ -1,0 +1,45 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: offer-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  cache:
+    type: redis
+    redis:
+      # Кеш живе 6 годин: ціни рухаються, але не щохвилини, а квота мала.
+      time-to-live: 6h
+      cache-null-values: false
+      key-prefix: "offer::"
+      use-key-prefix: true
+
+app:
+  providers:
+    serpapi:
+      base-url: ${SERPAPI_BASE_URL:https://serpapi.com}
+      api-key: ${SERPAPI_API_KEY:}
+      default-currency: ${SERPAPI_DEFAULT_CURRENCY:EUR}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.waylo.offer: INFO

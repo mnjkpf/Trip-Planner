@@ -1,0 +1,43 @@
+# ---- Секрети / ключі (НІКОЛИ не комітимо) ----
+infra/keys/*.pem
+*.pem
+*.p12
+*.jks
+.env
+*.env
+!.env.example
+
+# ---- Maven / Java build ----
+target/
+**/target/
+*.class
+*.jar
+*.war
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# ---- IDE ----
+.idea/
+*.iml
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# ---- Angular / Node (frontend) ----
+node_modules/
+frontend/dist/
+frontend/.angular/
+npm-debug.log*
+
+# ---- Логи / тимчасове ----
+*.log
+logs/
+
+# ---- ОС ----
+.DS_Store
+Thumbs.db
+
+# ---- Робочі теки асистента ----
+Claude outputs/

@@ -1,0 +1,67 @@
+SET client_encoding TO 'UTF8';
+
+-- Демо-каталог: ~14 місць Рима. Ідемпотентно (фіксовані UUID + ON CONFLICT).
+-- Запуск проти РОБОЧОГО placedb (не Flyway-міграція — щоб не чіпати тести place-service):
+--   Get-Content infra\seed\rome-places.sql | docker exec -i waylo-postgres psql -U tp -d placedb
+--
+-- location = geometry(Point,4326): ST_MakePoint(lon, lat) — X=довгота, Y=широта.
+
+INSERT INTO places (id, name, category, description, location, country_code, city, address, image_url, website, source_provider)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'Colosseum', 'ATTRACTION',
+   'Найбільший амфітеатр античного світу.',
+   ST_SetSRID(ST_MakePoint(12.4922, 41.8902), 4326), 'IT', 'Rome', 'Piazza del Colosseo, 1',
+   NULL, 'https://parcocolosseo.it', 'seed'),
+  ('00000000-0000-0000-0000-000000000002', 'Roman Forum', 'ATTRACTION',
+   'Серце стародавнього Рима: руїни храмів і базилік.',
+   ST_SetSRID(ST_MakePoint(12.4853, 41.8925), 4326), 'IT', 'Rome', 'Via della Salara Vecchia',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000003', 'Pantheon', 'ATTRACTION',
+   'Антична ротонда з найбільшим неармованим бетонним куполом.',
+   ST_SetSRID(ST_MakePoint(12.4769, 41.8986), 4326), 'IT', 'Rome', 'Piazza della Rotonda',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000004', 'Trevi Fountain', 'ATTRACTION',
+   'Найвідоміший бароковий фонтан міста.',
+   ST_SetSRID(ST_MakePoint(12.4833, 41.9009), 4326), 'IT', 'Rome', 'Piazza di Trevi',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000005', 'Vatican Museums', 'MUSEUM',
+   'Зібрання мистецтва Ватикану, включно з Сікстинською капелою.',
+   ST_SetSRID(ST_MakePoint(12.4536, 41.9065), 4326), 'IT', 'Rome', 'Viale Vaticano',
+   NULL, 'https://www.museivaticani.va', 'seed'),
+  ('00000000-0000-0000-0000-000000000006', 'St. Peter''s Basilica', 'ATTRACTION',
+   'Головна базиліка Ватикану.',
+   ST_SetSRID(ST_MakePoint(12.4539, 41.9022), 4326), 'IT', 'Rome', 'Piazza San Pietro',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000007', 'Galleria Borghese', 'MUSEUM',
+   'Колекція Берніні й Караваджо у віллі Боргезе.',
+   ST_SetSRID(ST_MakePoint(12.4920, 41.9142), 4326), 'IT', 'Rome', 'Piazzale Scipione Borghese, 5',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000008', 'Villa Borghese', 'PARK',
+   'Великий ландшафтний парк у центрі Рима.',
+   ST_SetSRID(ST_MakePoint(12.4870, 41.9145), 4326), 'IT', 'Rome', 'Piazzale Napoleone I',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-000000000009', 'Piazza Navona', 'ATTRACTION',
+   'Барокова площа з фонтаном Чотирьох Річок.',
+   ST_SetSRID(ST_MakePoint(12.4731, 41.8992), 4326), 'IT', 'Rome', 'Piazza Navona',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-00000000000a', 'Spanish Steps', 'ATTRACTION',
+   'Монументальні сходи від площі Іспанії до церкви Трініта-деї-Монті.',
+   ST_SetSRID(ST_MakePoint(12.4823, 41.9058), 4326), 'IT', 'Rome', 'Piazza di Spagna',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-00000000000b', 'Castel Sant''Angelo', 'MUSEUM',
+   'Мавзолей Адріана, згодом фортеця й музей.',
+   ST_SetSRID(ST_MakePoint(12.4663, 41.9031), 4326), 'IT', 'Rome', 'Lungotevere Castello, 50',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-00000000000c', 'Campo de'' Fiori', 'ATTRACTION',
+   'Жвава площа з денним ринком.',
+   ST_SetSRID(ST_MakePoint(12.4722, 41.8956), 4326), 'IT', 'Rome', 'Campo de'' Fiori',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-00000000000d', 'Roscioli', 'RESTAURANT',
+   'Відома салуміерія-ресторан у центрі.',
+   ST_SetSRID(ST_MakePoint(12.4726, 41.8945), 4326), 'IT', 'Rome', 'Via dei Giubbonari, 21',
+   NULL, NULL, 'seed'),
+  ('00000000-0000-0000-0000-00000000000e', 'Sant''Eustachio Il Caffè', 'CAFE',
+   'Історична кав''ярня з 1938 року.',
+   ST_SetSRID(ST_MakePoint(12.4750, 41.8988), 4326), 'IT', 'Rome', 'Piazza di Sant''Eustachio, 82',
+   NULL, NULL, 'seed')
+ON CONFLICT (id) DO NOTHING;
