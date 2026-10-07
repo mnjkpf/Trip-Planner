@@ -56,6 +56,10 @@ import { TripService } from '../core/trip.service';
                 @for (i of d.items; track $index) {
                   <article class="item">
                     <div class="inum">{{ i.order }}</div>
+                    @if (i.imageUrl) {
+                      <img class="iphoto" [src]="i.imageUrl" [alt]="i.placeName"
+                           loading="lazy" (error)="hideImage($event)" />
+                    }
                     <div class="ibody">
                       <div class="iname">{{ i.placeName }}</div>
                       <div class="imeta mono">
@@ -77,6 +81,24 @@ import { TripService } from '../core/trip.service';
               <div #mapEl class="map-fill"></div>
             </div>
           </div>
+        }
+
+        @if (t.photos.length > 0) {
+          <section class="sh-photos">
+            <div class="kicker">{{ 'photos.title' | translate }}</div>
+            <div class="sh-grid">
+              @for (p of t.photos; track p.url) {
+                <!-- Повний розмір відкриваємо в новій вкладці: гостю не потрібен
+                     повноцінний переглядач, а сторінка лишається простою. -->
+                <a class="sh-photo" [href]="p.url" target="_blank" rel="noopener">
+                  <img [src]="p.thumbUrl" [alt]="p.caption ?? p.placeName ?? ''" loading="lazy" />
+                  @if (p.placeName || p.caption) {
+                    <span class="sh-photo-cap">{{ p.placeName ?? p.caption }}</span>
+                  }
+                </a>
+              }
+            </div>
+          </section>
         }
       </div>
     } @else if (error()) {
@@ -129,11 +151,25 @@ import { TripService } from '../core/trip.service';
       flex: none; width: 24px; height: 24px; display: grid; place-items: center;
       background: var(--accent); color: #fff; font: 800 12px/1 var(--font);
     }
+    .iphoto { width: 52px; height: 52px; flex: none; object-fit: cover; border: 1px solid var(--divider); }
     .ibody { min-width: 0; }
     .iname { font: 800 14px/1.25 var(--font); color: var(--ink); }
     .imeta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 3px; }
     .imeta .sep { opacity: 0.4; }
     .inote { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+    .sh-photos { padding: 16px 20px 24px; border-top: 2px solid var(--divider); display: flex; flex-direction: column; gap: 10px; }
+    .sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .sh-photo { position: relative; border: 2px solid var(--divider); background: var(--surface); text-decoration: none; }
+    .sh-photo img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+    .sh-photo-cap {
+      position: absolute; left: 0; right: 0; bottom: 0; padding: 5px 7px;
+      background: rgba(14, 14, 26, 0.72); color: #fff; font-size: 11px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    @media (max-width: 560px) {
+      .sh-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+    }
 
     .sh-error { padding: 40px 20px; }
   `],
@@ -180,6 +216,11 @@ export class SharedTripView implements OnDestroy {
   ngOnDestroy(): void {
     clearOverlays(this.overlays);
     this.overlays = [];
+  }
+
+  /** Зовнішнє посилання могло протухнути — тоді просто ховаємо картинку. */
+  hideImage(ev: Event): void {
+    (ev.target as HTMLImageElement).style.display = 'none';
   }
 
   pickDay(index: number): void {

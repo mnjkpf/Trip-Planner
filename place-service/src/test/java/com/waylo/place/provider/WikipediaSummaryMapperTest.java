@@ -47,4 +47,23 @@ class WikipediaSummaryMapperTest {
         assertNull(mapper.parseSummaryImage("{\"type\":\"standard\",\"title\":\"X\"}"));
         assertNull(mapper.parseSummaryImage(""));
     }
+
+    @Test
+    void readsFirstSearchTitle() {
+        String json = """
+                {"batchcomplete":"","query":{"search":[
+                  {"ns":0,"title":"National Botanic Gardens, Dublin","pageid":123},
+                  {"ns":0,"title":"Botanic Gardens","pageid":456}]}}
+                """;
+
+        assertEquals("National Botanic Gardens, Dublin", mapper.parseFirstSearchTitle(json));
+    }
+
+    @Test
+    void emptyOrBrokenSearchResult_isNull() {
+        assertNull(mapper.parseFirstSearchTitle("{\"query\":{\"search\":[]}}"));
+        assertNull(mapper.parseFirstSearchTitle("{\"query\":{}}"));
+        assertNull(mapper.parseFirstSearchTitle("{}"));
+        assertNull(mapper.parseFirstSearchTitle(""));
+    }
 }

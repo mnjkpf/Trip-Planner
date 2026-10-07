@@ -16,7 +16,8 @@ public record SharedTripResponse(
         double destinationLon,
         LocalDate startDate,
         LocalDate endDate,
-        List<Day> days
+        List<Day> days,
+        List<Photo> photos
 ) {
     public record Day(
             int dayIndex,
@@ -24,6 +25,16 @@ public record SharedTripResponse(
             double distanceKm,
             int walkMinutes,
             List<Item> items
+    ) {}
+
+    /** Фото без автора й без id рядка: гостю досить картинки та підпису. */
+    public record Photo(
+            String url,
+            String thumbUrl,
+            String caption,
+            String placeName,
+            Integer width,
+            Integer height
     ) {}
 
     public record Item(
@@ -35,6 +46,7 @@ public record SharedTripResponse(
             String time,
             int dwellMinutes,
             Integer travelMinutesFromPrev,
-            String note
+            String note,
+            String imageUrl
     ) {}
 }

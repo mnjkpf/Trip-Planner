@@ -37,6 +37,28 @@ public class WikipediaSummaryMapper {
         return new PlaceImage(image, wikidata);
     }
 
+    /**
+     * Заголовок першого результату пошуку MediaWiki
+     * (/w/api.php?action=query&list=search) або null.
+     */
+    @SuppressWarnings("unchecked")
+    public String parseFirstSearchTitle(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        Map<String, Object> root = jsonMapper.readValue(json, Map.class);
+        if (!(root.get("query") instanceof Map<?, ?> query)) {
+            return null;
+        }
+        if (!(query.get("search") instanceof java.util.List<?> results) || results.isEmpty()) {
+            return null;
+        }
+        if (!(results.get(0) instanceof Map<?, ?> first)) {
+            return null;
+        }
+        return asString(first.get("title"));
+    }
+
     private String imageFrom(Map<String, Object> root) {
         if (root.get("thumbnail") instanceof Map<?, ?> thumb) {
             String src = asString(thumb.get("source"));

@@ -11,8 +11,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  * Reactive security для gateway (Spring Security 7 / WebFlux).
  *
  * Bearer-токени → stateless, тому csrf вимкнено.
- * Публічні: логін/реєстрація (/api/auth/**), JWKS, health/info/prometheus
- * і перегляд маршруту за посиланням (/api/public/**) — туди ходять гості без акаунта.
+ * Публічні: логін/реєстрація (/api/auth/**), JWKS, health/info/prometheus,
+ * перегляд маршруту за посиланням (/api/public/**) і віддача картинок
+ * (GET /api/media/**) — туди ходять гості без акаунта.
  * Решта /api/** — тільки з валідним JWT.
  */
 @Configuration
@@ -27,6 +28,10 @@ public class SecurityConfig {
                         .pathMatchers("/api/auth/**", "/api/user/register-user", "/.well-known/jwks.json").permitAll()
                         .pathMatchers("/api/flights/**", "/api/hotels/**").permitAll()
                         .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/public/**").permitAll()
+                        // Картинки віддаємо без токена: <img src> не вміє слати
+                        // Authorization. Захист — невгадуваний UUID у шляху.
+                        // Завантаження (POST /api/media/upload) лишається під автентифікацією.
+                        .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/media/**").permitAll()
                         .pathMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

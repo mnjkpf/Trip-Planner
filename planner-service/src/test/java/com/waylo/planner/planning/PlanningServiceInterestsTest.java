@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class PlanningServiceInterestsTest {
 
     private static PlaceDto p(String id, String category) {
-        return new PlaceDto(id, "Place " + id, category, 41.9, 12.5);
+        return new PlaceDto(id, "Place " + id, category, 41.9, 12.5, null);
     }
 
     private final List<PlaceDto> places = List.of(

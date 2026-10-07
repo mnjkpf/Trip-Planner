@@ -20,4 +20,9 @@ public final class ApiExceptions {
     public static class TripForbiddenException extends RuntimeException {
         public TripForbiddenException(String msg) { super(msg); }
     }
+
+    /** Сусідній сервіс не відповідає (напр. media-service під час запиту тікета). */
+    public static class ServiceUnavailableException extends RuntimeException {
+        public ServiceUnavailableException(String msg) { super(msg); }
+    }
 }

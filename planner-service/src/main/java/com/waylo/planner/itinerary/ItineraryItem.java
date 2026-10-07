@@ -15,5 +15,7 @@ public record ItineraryItem(
         int travelMinutesFromPrev,
         int dwellMinutes,
         String plannedStart,
-        String plannedEnd
+        String plannedEnd,
+        /** Фото місця від place-service; null — якщо його там немає. */
+        String imageUrl
 ) {}

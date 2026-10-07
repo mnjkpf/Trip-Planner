@@ -48,10 +48,29 @@ app:
     batch-size: 100
   services:
     place-uri: ${SVC_PLACE_URI:http://localhost:8082}
+    # Тікети на завантаження фото (єдиний синхронний виклик у бік медіа).
+    media-uri: ${SVC_MEDIA_URI:http://localhost:8088}
     # Потрібен лише для запрошення учасників: шукаємо userId за поштою.
     user-uri: ${SVC_USER_URI:http://localhost:8081}
   topics:
     plan-completed: trip.plan.completed
+    # Знімок маршруту для context-service (event-carried state transfer).
+    itinerary-snapshot: trip.itinerary.snapshot
+    # Погодні попередження від context-service — лише поради, маршрут не міняємо.
+    weather-alert: trip.weather.alert
+    # Фото: media-service каже, що файл на місці; ми — коли байти вже не потрібні.
+    media-ready: media.ready
+    media-delete-requested: media.delete.requested
+  weather:
+    # На старті перевидати знімки ще не завершених подорожей (ідемпотентно).
+    snapshot-backfill: true
+  place-images:
+    # Дотягування фото місць для старих маршрутів (нові приходять разом із планом).
+    backfill: true
+    initial-delay: PT30S
+    # Черга розбирається пачками: 50 пунктів за прохід. Коли вона порожня,
+    # прохід коштує один індексований запит — тому інтервал можна тримати малим.
+    interval: PT1M
 
 management:
   endpoints:

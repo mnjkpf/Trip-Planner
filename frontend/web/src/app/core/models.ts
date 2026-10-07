@@ -70,6 +70,8 @@ export interface ItineraryItem {
   travelMinutesFromPrev: number | null;
   locked: boolean;
   note: string | null;
+  /** Фото місця з каталогу (Wikipedia). Підтягується саме, користувач його не додає. */
+  imageUrl: string | null;
 }
 
 export interface ItineraryDay {
@@ -257,6 +259,7 @@ export interface SharedTripItem {
   dwellMinutes: number;
   travelMinutesFromPrev: number | null;
   note: string | null;
+  imageUrl: string | null;
 }
 
 export interface SharedTripDay {
@@ -265,6 +268,16 @@ export interface SharedTripDay {
   distanceKm: number;
   walkMinutes: number;
   items: SharedTripItem[];
+}
+
+/** Фото на публічній сторінці: без id рядка й без автора. */
+export interface SharedTripPhoto {
+  url: string;
+  thumbUrl: string;
+  caption: string | null;
+  placeName: string | null;
+  width: number | null;
+  height: number | null;
 }
 
 /** Маршрут очима гостя: вужче за Trip — ні id, ні власника, ні вішліста. */
@@ -277,6 +290,38 @@ export interface SharedTrip {
   startDate: string;
   endDate: string;
   days: SharedTripDay[];
+  photos: SharedTripPhoto[];
+}
+
+/**
+ * Фото подорожі. UPLOADING — рядок уже є, а байти ще їдуть: показуємо
+ * плейсхолдер, поки не прийде подія про готовність.
+ */
+export interface TripPhoto {
+  id: string;
+  mediaId: string;
+  url: string;
+  thumbUrl: string;
+  caption: string | null;
+  placeName: string | null;
+  itemId: string | null;
+  width: number | null;
+  height: number | null;
+  status: 'UPLOADING' | 'READY';
+  /** Завантажив я — отже, можу й видалити. */
+  mine: boolean;
+  createdAt: string;
+}
+
+/** Дозвіл на завантаження: куди слати файл і з яким тікетом. */
+export interface PhotoUploadTicket {
+  photoId: string;
+  mediaId: string;
+  ticket: string;
+  uploadPath: string;
+  maxBytes: number;
+  /** Дозволені типи через кому, як їх назвав media-service. */
+  contentTypes: string;
 }
 
 export type ExpenseCategory =
@@ -352,4 +397,21 @@ export interface TripMember {
 export interface InviteMemberRequest {
   email: string;
   role: 'EDITOR' | 'VIEWER';
+}
+
+/**
+ * Погодне попередження від context-service. Лише порада: маршрут не змінюється.
+ * swap* — день, з яким варто подумати про обмін (null — сухішого дня немає).
+ */
+export interface WeatherAlert {
+  id: string;
+  date: string;
+  dayIndex: number;
+  level: 'RAIN' | 'HEAVY_RAIN';
+  precipitationMm: number;
+  outdoorPlaces: string[];
+  swapDate: string | null;
+  swapDayIndex: number | null;
+  swapPrecipitationMm: number | null;
+  generatedAt: string;
 }

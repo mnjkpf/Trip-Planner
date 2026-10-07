@@ -36,6 +36,8 @@ public record ItineraryResponse(
             int dwellMinutes,
             Integer travelMinutesFromPrev,
             boolean locked,
-            String note
+            String note,
+            /** Фото місця від place-service (Wikipedia); null — якщо його немає. */
+            String imageUrl
     ) {}
 }

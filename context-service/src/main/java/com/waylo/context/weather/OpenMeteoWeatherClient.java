@@ -3,9 +3,11 @@ package com.waylo.context.weather;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -25,7 +27,12 @@ public class OpenMeteoWeatherClient implements WeatherClient {
     public OpenMeteoWeatherClient(RestClient.Builder builder,
                                   OpenMeteoMapper mapper,
                                   @Value("${app.providers.open-meteo.base-url}") String baseUrl) {
-        this.restClient = builder.baseUrl(baseUrl).build();
+        // Явні таймаути: клієнта тепер викликає і Kafka-лісенер погодного нагляду,
+        // тож завислий Open-Meteo не має тримати споживача хвилинами.
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(3));
+        requestFactory.setReadTimeout(Duration.ofSeconds(8));
+        this.restClient = builder.baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.mapper = mapper;
     }
 

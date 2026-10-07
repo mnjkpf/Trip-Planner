@@ -32,6 +32,7 @@ public record PlanCompletedEvent(
             Integer travelMinutesFromPrev,
             Integer dwellMinutes,
             String plannedStart,
-            String plannedEnd
+            String plannedEnd,
+            String imageUrl
     ) {}
 }

@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { OwnPlacePreview } from '../core/models';
 import { PlaceService } from '../core/place.service';
 import { WishlistService } from '../core/wishlist.service';
@@ -113,7 +113,6 @@ import { WishlistService } from '../core/wishlist.service';
 export class WishlistList {
   protected wishlist = inject(WishlistService);
   private places = inject(PlaceService);
-  private i18n = inject(TranslateService);
 
   url = '';
   note = '';
@@ -134,8 +133,10 @@ export class WishlistList {
       next: (p) => { this.preview.set(p); this.loading.set(false); },
       error: (e) => {
         this.loading.set(false);
-        const msg = e?.error?.message ?? this.i18n.instant('own.error');
-        this.error.set(msg || 'own.error');
+        // У error() кладемо КЛЮЧ — шаблон проганяє його через | translate.
+        // Текст від бекенда не показуємо: він одномовний. 400 — посилання
+        // не розпізнали, решта — щось зламалось на нашому боці.
+        this.error.set(e?.status === 400 ? 'own.error' : 'own.add_error');
       },
     });
   }

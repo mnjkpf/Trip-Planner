@@ -41,8 +41,8 @@ import { Trip } from '../core/models';
             <thead>
               <tr>
                 <th>{{ 'trips.col_trip' | translate }}</th>
-                <th>{{ 'trips.col_direction' | translate }}</th>
-                <th>{{ 'trips.col_dates' | translate }}</th>
+                <th class="c-dest">{{ 'trips.col_direction' | translate }}</th>
+                <th class="c-dates">{{ 'trips.col_dates' | translate }}</th>
                 <th>{{ 'trips.col_status' | translate }}</th>
                 <th class="w1"></th>
               </tr>
@@ -54,8 +54,8 @@ import { Trip } from '../core/models';
                     <div class="t-title">{{ t.title }}</div>
                     <div class="t-meta">{{ 'trips.created_on' | translate }} {{ t.createdAt | date: 'd MMM y' }}</div>
                   </td>
-                  <td>{{ t.destinationName }}@if (t.destinationCountry) { · {{ t.destinationCountry }} }</td>
-                  <td class="nowrap">{{ t.startDate | date: 'd MMM' }} – {{ t.endDate | date: 'd MMM y' }}</td>
+                  <td class="c-dest">{{ t.destinationName }}@if (t.destinationCountry) { · {{ t.destinationCountry }} }</td>
+                  <td class="c-dates nowrap">{{ t.startDate | date: 'd MMM' }} – {{ t.endDate | date: 'd MMM y' }}</td>
                   <td><span class="tag" [class]="'st-' + t.status">{{ statusLabelKey(t.status) | translate }}</span></td>
                   <td class="arrow">→</td>
                 </tr>
@@ -68,6 +68,11 @@ import { Trip } from '../core/models';
   `,
   styles: [`
     .toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+    /* Таблиця на 5 колонок у телефон не влазить. Напрямок зазвичай дублюється
+       в назві подорожі, тож ховаємо його першим; дати — наступні за чергою. */
+    @media (max-width: 700px) { .c-dest { display: none; } }
+    @media (max-width: 520px) { .c-dates { display: none; } }
     .count-note { margin-left: auto; font-size: 11px; color: var(--muted); }
     .tbl { padding-top: 0; padding-bottom: 28px; border-bottom: 0; }
     .t-title { font-weight: 600; }

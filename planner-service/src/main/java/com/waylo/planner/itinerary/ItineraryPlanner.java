@@ -125,7 +125,7 @@ public class ItineraryPlanner {
             LocalTime end = start.plusMinutes(dwell);
             items.add(new ItineraryItem(
                     p.id(), p.name(), p.category(), p.lat(), p.lon(),
-                    i + 1, travel, dwell, hm(start), hm(end)));
+                    i + 1, travel, dwell, hm(start), hm(end), p.imageUrl()));
             cursor = end;
             prev = p;
         }

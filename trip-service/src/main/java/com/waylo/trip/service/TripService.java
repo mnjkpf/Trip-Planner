@@ -26,6 +26,7 @@ import com.waylo.trip.dto.TripResponse;
 import com.waylo.trip.dto.UpdateTripRequest;
 import com.waylo.trip.error.ApiExceptions.TripConflictException;
 import com.waylo.trip.error.ApiExceptions.TripNotFoundException;
+import com.waylo.trip.outbox.ItinerarySnapshots;
 import com.waylo.trip.repository.ItineraryItemRepository;
 import com.waylo.trip.repository.OutboxRepository;
 import com.waylo.trip.repository.PlanJobRepository;
@@ -61,6 +62,7 @@ public class TripService {
     private final JsonMapper jsonMapper;
     private final TripAccess access;
     private final TripMemberRepository memberRepository;
+    private final ItinerarySnapshots snapshots;
 
     public TripService(TripRepository tripRepository,
                        PlanJobRepository planJobRepository,
@@ -71,7 +73,8 @@ public class TripService {
                        ObjectProvider<Tracer> tracerProvider,
                        JsonMapper jsonMapper,
                        TripAccess access,
-                       TripMemberRepository memberRepository) {
+                       TripMemberRepository memberRepository,
+                       ItinerarySnapshots snapshots) {
         this.tripRepository = tripRepository;
         this.planJobRepository = planJobRepository;
         this.outboxRepository = outboxRepository;
@@ -82,6 +85,7 @@ public class TripService {
         this.jsonMapper = jsonMapper;
         this.access = access;
         this.memberRepository = memberRepository;
+        this.snapshots = snapshots;
     }
 
     @Transactional
@@ -167,6 +171,10 @@ public class TripService {
             clearItinerary(tripId);
             trip.setStatus(TripStatus.DRAFT);
         }
+        if (planningInputsChanged) {
+            // нові дати/місце → context-service має перерахувати (або зняти) погодні попередження
+            snapshots.publish(trip);
+        }
         // managed entity — зміни підуть dirty checking-ом на комміті
         return toResponse(trip, access.roleOf(userId, tripId));
     }
@@ -202,7 +210,7 @@ public class TripService {
                     i.getId(), i.getOrderIndex(), i.getPlaceId(), i.getPlaceName(), i.getPlaceCategory(),
                     i.getPlaceLat(), i.getPlaceLon(),
                     fmtTime(i.getPlannedStart()), i.getDwellMinutes(), i.getTravelMinutesFromPrev(),
-                    i.isLocked(), i.getNote()));
+                    i.isLocked(), i.getNote(), i.getPlaceImageUrl()));
             prev = i;
         }
         double km = Math.round(meters / 100.0) / 10.0;   // 0.1 км
@@ -228,6 +236,7 @@ public class TripService {
     public void delete(UUID userId, UUID tripId) {
         Trip trip = access.require(userId, tripId, TripRole.OWNER);
         tripRepository.delete(trip);   // trip_days / itinerary_items / plan_jobs — ON DELETE CASCADE
+        snapshots.publishDeleted(tripId);
     }
 
     /**
@@ -409,7 +418,7 @@ public class TripService {
     /** Додати місце (з вішлісту) у кінець дня; перенумерувати й перерахувати час дня. */
     @Transactional
     public ItineraryResponse addItem(UUID userId, UUID tripId, int dayIndex, AddItemRequest req) {
-        access.require(userId, tripId, TripRole.EDITOR);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         TripDay day = tripDayRepository.findByTripIdAndDayIndex(tripId, dayIndex)
                 .orElseThrow(() -> new TripNotFoundException("День не знайдено: " + dayIndex));
         List<ItineraryItem> list = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(day.getId());
@@ -429,24 +438,26 @@ public class TripService {
         itineraryItemRepository.save(item);
         list.add(item);
         renumberAndReschedule(list);
+        snapshots.publish(trip);
         return itinerary(userId, tripId);
     }
 
     @Transactional
     public ItineraryResponse removeItem(UUID userId, UUID tripId, UUID itemId) {
-        access.require(userId, tripId, TripRole.EDITOR);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         ItineraryItem item = requireItem(tripId, itemId);
         List<ItineraryItem> list = itineraryItemRepository.findByTripDayIdOrderByOrderIndexAsc(item.getTripDayId());
         list.removeIf(x -> x.getId().equals(itemId));
         itineraryItemRepository.delete(item);
         renumberAndReschedule(list);
+        snapshots.publish(trip);
         return itinerary(userId, tripId);
     }
 
     /** Перенести пункт у день toDayIndex на позицію toOrder; перенумерувати обидва дні. */
     @Transactional
     public ItineraryResponse moveItem(UUID userId, UUID tripId, UUID itemId, int toDayIndex, int toOrder) {
-        access.require(userId, tripId, TripRole.EDITOR);
+        Trip trip = access.require(userId, tripId, TripRole.EDITOR);
         ItineraryItem moved = requireItem(tripId, itemId);
         UUID fromDayId = moved.getTripDayId();
         TripDay toDay = tripDayRepository.findByTripIdAndDayIndex(tripId, toDayIndex)
@@ -466,6 +477,9 @@ public class TripService {
             toList.add(clamp(toOrder - 1, 0, toList.size()), moved);
             renumberAndReschedule(fromList);
             renumberAndReschedule(toList);
+            // Склад днів змінився. Перестановка всередині дня погодній пораді
+            // байдужа, тож знімок шлемо лише тут.
+            snapshots.publish(trip);
         }
         return itinerary(userId, tripId);
     }

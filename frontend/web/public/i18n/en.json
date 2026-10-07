@@ -26,7 +26,8 @@
     "error": "Error",
     "close": "Close",
     "optional": "optional",
-    "sending": "Sending…"
+    "sending": "Sending…",
+    "forbidden": "Not enough rights for this action"
   },
   "auth": {
     "login_title": "Log in",
@@ -126,7 +127,8 @@
     "route": "Route",
     "hotels": "Hotels",
     "flights": "Flights",
-    "budget": "Budget"
+    "budget": "Budget",
+    "photos": "Photos"
   },
   "day": {
     "label": "Day",
@@ -385,5 +387,38 @@
     "not_found": "No Waylo account with that email",
     "already": "This person already has access",
     "error": "Could not update access"
+  },
+  "weather": {
+    "title": "Weather heads-up",
+    "only_advice": "Just a suggestion — your plan stays as it is.",
+    "rain_on": "Day {{day}} ({{date}}): rain expected, ~{{mm}} mm",
+    "heavy_rain_on": "Day {{day}} ({{date}}): heavy rain expected, ~{{mm}} mm",
+    "outdoor_plan": "Mostly outdoors that day: {{places}}.",
+    "swap_hint": "Day {{day}} ({{date}}) looks drier (~{{mm}} mm) and has fewer outdoor stops — consider swapping these two days.",
+    "no_swap": "There is no drier day with fewer outdoor stops on this trip — pack an umbrella or swap a park for a museum.",
+    "show_day": "Show day",
+    "dismiss": "Got it",
+    "day_mark": "Rain expected on this day"
+  },
+  "photos": {
+    "title": "Photos",
+    "add": "Add photos",
+    "uploading": "Uploading…",
+    "hint": "JPEG, PNG or WebP, up to 10 MB each. Thumbnails are generated in the background.",
+    "place": "Place",
+    "place_none": "No place",
+    "empty": "No photos yet. Add the first one.",
+    "empty_viewer": "No photos in this trip yet.",
+    "delete": "Delete photo",
+    "prev": "Previous",
+    "next": "Next",
+    "load_error": "Could not load photos",
+    "upload_error": "Upload failed",
+    "too_large": "File is too large (max 10 MB)",
+    "wrong_type": "Only JPEG, PNG and WebP are supported",
+    "forbidden": "You cannot add photos to this trip",
+    "unavailable": "Photo storage is unavailable — try later",
+    "delete_error": "Could not delete the photo",
+    "delete_forbidden": "Only the person who added the photo, or the trip owner, can delete it"
   }
 }

@@ -1,0 +1,353 @@
+# Прод-стек Waylo на одній машині (Hetzner CAX21: 4 ARM-ядра, 8 ГБ).
+#
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d
+#
+# Чим відрізняється від локального docker-compose.yml:
+#   • образи тягнуться з GHCR (їх збирає CI під arm64), а не збираються тут —
+#     на двох-чотирьох ядрах складання восьми Maven-проєктів тривало б вічність;
+#   • портів на хост не публікує ніхто, крім Caddy: 80 і 443 — єдині двері;
+#   • кожному сервісу виставлено mem_limit, а JVM бере частку від нього
+#     (див. deploy/Dockerfile.runtime) — інакше вісім куп за замовчуванням
+#     спокійно з'їли б усі 8 ГБ;
+#   • Grafana LGTM і Kafka UI вимкнені за замовчуванням (профіль "obs"):
+#     разом вони просять ще близько двох гігабайтів.
+#
+# Бюджет пам'яті: ~5.4 ГБ зайнято, решта — запас на сплески й сторінковий кеш.
+
+name: waylo
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+
+  caddy:
+    <<: *service-defaults
+    image: caddy:2-alpine
+    container_name: waylo-caddy
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+      - caddylogs:/var/log/caddy
+    mem_limit: 128m
+
+  postgres:
+    <<: *service-defaults
+    image: postgis/postgis:17-3.5
+    container_name: waylo-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      TP_DATABASES: userdb,placedb,tripdb,contextdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+
+  redis:
+    <<: *service-defaults
+    image: redis:8-alpine
+    container_name: waylo-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: 256m
+
+  kafka:
+    <<: *service-defaults
+    image: apache/kafka:4.0.0
+    container_name: waylo-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    mem_limit: 1g
+
+  objects:
+    <<: *service-defaults
+    image: chrislusf/seaweedfs:latest
+    container_name: waylo-objects
+    command: ["server", "-dir=/data", "-master.volumeSizeLimitMB=1024",
+              "-s3", "-s3.port=9000", "-s3.config=/etc/seaweedfs/s3.json"]
+    volumes:
+      - objectsdata:/data
+      - ../infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    mem_limit: 512m
+
+  user-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-user-service:${WAYLO_TAG:-latest}
+    container_name: waylo-user
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_PRIVATE_KEY_LOCATION: file:/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/keys/jwt-public.pem
+      JWT_ISSUER: https://${API_DOMAIN}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - ../infra/keys:/keys:ro
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8081' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 384m
+
+  place-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-place-service:${WAYLO_TAG:-latest}
+    container_name: waylo-place
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8082' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 384m
+
+  trip-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-trip-service:${WAYLO_TAG:-latest}
+    container_name: waylo-trip
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_USER_URI: http://user-service:8081
+      SVC_MEDIA_URI: http://media-service:8088
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8083' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 448m
+
+  context-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-context-service:${WAYLO_TAG:-latest}
+    container_name: waylo-context
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8084' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 384m
+
+  planner-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-planner-service:${WAYLO_TAG:-latest}
+    container_name: waylo-planner
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_CONTEXT_URI: http://context-service:8084
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8086' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 384m
+
+  offer-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-offer-service:${WAYLO_TAG:-latest}
+    container_name: waylo-offer
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
+      SERPAPI_DEFAULT_CURRENCY: ${SERPAPI_DEFAULT_CURRENCY:-EUR}
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8087' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 320m
+
+  media-service:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-media-service:${WAYLO_TAG:-latest}
+    container_name: waylo-media
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      objects:
+        condition: service_started
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      S3_ENDPOINT: http://objects:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8088' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 448m
+
+  api-gateway:
+    <<: *service-defaults
+    image: ghcr.io/${GHCR_OWNER}/waylo-api-gateway:${WAYLO_TAG:-latest}
+    container_name: waylo-gateway
+    depends_on:
+      user-service:
+        condition: service_healthy
+      place-service:
+        condition: service_healthy
+      trip-service:
+        condition: service_healthy
+      context-service:
+        condition: service_healthy
+      offer-service:
+        condition: service_healthy
+      media-service:
+        condition: service_healthy
+    environment:
+      SVC_USER_URI: http://user-service:8081
+      SVC_PLACE_URI: http://place-service:8082
+      SVC_TRIP_URI: http://trip-service:8083
+      SVC_CONTEXT_URI: http://context-service:8084
+      SVC_OFFER_URI: http://offer-service:8087
+      SVC_MEDIA_URI: http://media-service:8088
+      JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OTEL_SDK_DISABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 448m
+
+  # ── Спостережуваність: вмикається профілем, бо просить ще ~2 ГБ ──
+  #   docker compose -f deploy/docker-compose.prod.yml --profile obs up -d
+  lgtm:
+    <<: *service-defaults
+    image: grafana/otel-lgtm:latest
+    container_name: waylo-lgtm
+    profiles: ["obs"]
+    volumes:
+      - lgtmdata:/data
+    mem_limit: 2g
+
+volumes:
+  pgdata:
+  redisdata:
+  kafkadata:
+  objectsdata:
+  lgtmdata:
+  caddydata:
+  caddyconfig:
+  caddylogs:

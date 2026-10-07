@@ -7,6 +7,7 @@ import { Observable, switchMap, take, takeWhile, timer } from 'rxjs';
 import { TripBudget } from './trip-budget';
 import { TripFlights } from './trip-flights';
 import { TripMembers } from './trip-members';
+import { PhotoPlace, TripPhotos } from './trip-photos';
 import { TripHotels } from './trip-hotels';
 import { TripService } from '../core/trip.service';
 import { AuthService } from '../core/auth.service';
@@ -20,13 +21,14 @@ import {
   TravelContext,
   Trip,
   TripRole,
+  WeatherAlert,
   WishlistItem,
 } from '../core/models';
 import { preferenceChipKeys } from './plan-preferences-editor';
 
 @Component({
   selector: 'app-trip-detail',
-  imports: [DatePipe, RouterLink, TripHotels, TripFlights, TripBudget, TripMembers, TranslatePipe],
+  imports: [DatePipe, RouterLink, TripHotels, TripFlights, TripBudget, TripMembers, TripPhotos, TranslatePipe],
   template: `
     @if (trip(); as t) {
       <div class="page">
@@ -124,7 +126,7 @@ import { preferenceChipKeys } from './plan-preferences-editor';
           </div>
         }
 
-        @if (error()) { <div class="section err-sec"><p class="error">{{ error() }}</p></div> }
+        @if (error()) { <div class="section err-sec"><p class="error">{{ error()! | translate }}</p></div> }
 
         @if (ctx(); as c) {
           <div class="ctx-strip">
@@ -137,13 +139,49 @@ import { preferenceChipKeys } from './plan-preferences-editor';
               @for (d of c.days; track d.date) {
                 <div class="ctx-day" [class.warn]="(d.precipitationMm ?? 0) > 0">
                   <div class="kicker">{{ d.date | date: 'd MMM' }}</div>
-                  @if (d.tempMaxC !== null) {
+                  @if (d.tempMaxC != null) {
                     <div class="ctx-temp">{{ d.tempMinC }}° / {{ d.tempMaxC }}°</div>
                   } @else { <div class="ctx-temp muted">{{ 'detail.only_season' | translate }}</div> }
                   @if ((d.precipitationMm ?? 0) > 0) { <div class="ctx-rain">{{ 'detail.rain' | translate }} {{ d.precipitationMm }} mm</div> }
                 </div>
               }
             </div>
+          </div>
+        }
+
+        @if (weatherAlerts().length > 0) {
+          <!-- Лише порада: маршрут не змінюється, рішення за людиною. -->
+          <div class="wx-sec">
+            <div class="wx-head">
+              <span class="kicker">{{ 'weather.title' | translate }}</span>
+              <span class="wx-note">{{ 'weather.only_advice' | translate }}</span>
+            </div>
+            @for (a of weatherAlerts(); track a.id) {
+              <div class="wx-alert" [class.heavy]="a.level === 'HEAVY_RAIN'">
+                <span class="wx-icon" aria-hidden="true">☂</span>
+                <div class="wx-body">
+                  <div class="wx-title">
+                    {{ (a.level === 'HEAVY_RAIN' ? 'weather.heavy_rain_on' : 'weather.rain_on') | translate: { day: a.dayIndex, date: (a.date | date: 'dd.MM'), mm: a.precipitationMm } }}
+                  </div>
+                  @if (a.outdoorPlaces.length > 0) {
+                    <div class="wx-text">{{ 'weather.outdoor_plan' | translate: { places: a.outdoorPlaces.join(', ') } }}</div>
+                  }
+                  @if (a.swapDate) {
+                    <div class="wx-text wx-swap">
+                      {{ 'weather.swap_hint' | translate: { day: a.swapDayIndex, date: (a.swapDate | date: 'dd.MM'), mm: a.swapPrecipitationMm } }}
+                    </div>
+                  } @else {
+                    <div class="wx-text">{{ 'weather.no_swap' | translate }}</div>
+                  }
+                </div>
+                <div class="wx-actions">
+                  <button class="btn btn-ghost btn-sm" (click)="showDay(a)">{{ 'weather.show_day' | translate }}</button>
+                  <button class="btn btn-ghost btn-sm" (click)="dismissAlert(a)" [disabled]="dismissing() === a.id">
+                    {{ 'weather.dismiss' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         }
 
@@ -161,6 +199,9 @@ import { preferenceChipKeys } from './plan-preferences-editor';
             <button class="tab" [class.on]="tab() === 'budget'" (click)="tab.set('budget')">
               {{ 'tabs.budget' | translate }}
             </button>
+            <button class="tab" [class.on]="tab() === 'photos'" (click)="tab.set('photos')">
+              {{ 'tabs.photos' | translate }}
+            </button>
           </div>
         }
 
@@ -176,6 +217,10 @@ import { preferenceChipKeys } from './plan-preferences-editor';
           <app-trip-budget [trip]="t" />
         }
 
+        @if (tab() === 'photos' && trip(); as t) {
+          <app-trip-photos [trip]="t" [canEdit]="canEdit()" [places]="photoPlaces()" [version]="photoVersion()" />
+        }
+
         @if (tab() === 'route' && itinerary(); as it) {
           <div class="section-soft day-bar">
             <div class="day-tabs">
@@ -184,7 +229,7 @@ import { preferenceChipKeys } from './plan-preferences-editor';
                         (click)="openDay.set(d.dayIndex)"
                         (dragover)="edit() && onDragOver($event)"
                         (drop)="edit() && onDropTab(d.dayIndex, $event)">
-                  <span class="dt-n">{{ d.dayIndex }}</span>
+                  <span class="dt-n">{{ d.dayIndex }}@if (alertDates().has(d.date)) {<span class="dt-rain" [title]="'weather.day_mark' | translate">☂</span>}</span>
                   <span class="dt-date">{{ d.date | date: 'd MMM' }}</span>
                 </button>
               }
@@ -216,6 +261,12 @@ import { preferenceChipKeys } from './plan-preferences-editor';
                         <span class="drag-handle" draggable="true" (dragstart)="onDragStart(item, $event)" [title]="'edit.drag' | translate">⠿</span>
                       }
                       <span class="ti-ord">{{ item.order }}</span>
+                      @if (item.imageUrl) {
+                        <!-- Фото місця з каталогу. Падіння завантаження ховаємо:
+                             зовнішні посилання з часом протухають. -->
+                        <img class="ti-photo" [src]="item.imageUrl" [alt]="item.placeName"
+                             loading="lazy" (error)="hideImage($event)" />
+                      }
                       <div class="ti-body">
                         <div class="ti-top">
                           <span class="ti-name">{{ item.placeName }}</span>
@@ -272,6 +323,16 @@ import { preferenceChipKeys } from './plan-preferences-editor';
     .d-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; padding: 20px 28px 16px; border-bottom: 2px solid var(--divider); }
     .d-title { margin: 8px 0 6px; }
     .d-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+    /* До пʼяти кнопок у шапці — на вузькому екрані вони мають лягати рядами,
+       а не вилазити за край. */
+    @media (max-width: 560px) {
+      .d-head { flex-direction: column; align-items: stretch; }
+      .d-actions { flex-wrap: wrap; }
+      .d-actions .btn, .d-actions a.btn { flex: 1 1 auto; justify-content: center; }
+      .share-row { flex-direction: column; align-items: stretch; }
+      .share-url { flex: 1 1 auto; }
+    }
+
     .role-chip {
       align-self: center; background: var(--accent-100); color: var(--accent-800);
       font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 8px;
@@ -331,6 +392,7 @@ import { preferenceChipKeys } from './plan-preferences-editor';
     .trip-item.locked { background: color-mix(in srgb, var(--lime) 22%, transparent); }
     .drag-handle { cursor: grab; color: var(--muted-2); font-size: 15px; line-height: 26px; user-select: none; }
     .ti-ord { width: 26px; height: 26px; flex: none; background: var(--accent); color: var(--bg); display: inline-flex; align-items: center; justify-content: center; font: 800 12px/1 var(--font); }
+    .ti-photo { width: 56px; height: 56px; flex: none; object-fit: cover; border: 1px solid var(--divider); background: var(--surface-2); }
     .ti-body { flex: 1; min-width: 0; }
     .ti-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
     .ti-name { font: 800 15px/1.25 var(--font); }
@@ -354,6 +416,32 @@ import { preferenceChipKeys } from './plan-preferences-editor';
     .add-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .aw-name { font-weight: 600; font-size: 14px; }
 
+    .wx-sec {
+      display: flex; flex-direction: column; gap: 10px; padding: 14px 28px;
+      border-bottom: 2px solid var(--divider);
+      background: color-mix(in srgb, var(--lime) 30%, transparent);
+    }
+    .wx-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+    .wx-note { font-size: 11px; color: var(--muted); }
+    .wx-alert {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: var(--surface); border: 2px solid var(--divider); padding: 12px 14px;
+    }
+    .wx-alert.heavy { border-color: var(--accent); }
+    .wx-icon { font-size: 20px; line-height: 1.1; color: var(--accent-700); flex: none; }
+    .wx-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .wx-title { font: 800 14px/1.3 var(--font); }
+    .wx-text { font-size: 13px; line-height: 1.45; color: var(--ink); }
+    .wx-swap { font-weight: 600; color: var(--accent-800); }
+    .wx-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+    .dt-rain { font-size: 11px; margin-left: 4px; }
+    @media (max-width: 560px) {
+      .wx-sec { padding: 12px 16px; }
+      .wx-alert { flex-wrap: wrap; }
+      .wx-actions { flex-direction: row; width: 100%; }
+      .wx-actions .btn { flex: 1 1 auto; justify-content: center; }
+    }
+
     .tab-bar { display: flex; gap: 0; padding: 0 28px; border-bottom: 2px solid var(--divider); }
     .tab { background: transparent; border: 0; padding: 14px 24px;
       font: 800 13px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase;
@@ -375,7 +463,7 @@ export class TripDetail implements OnDestroy {
   /** Вибрані фільтри планування — чипами «тільки читати» у шапці. */
   prefChips = computed(() => preferenceChipKeys(this.trip()?.preferences));
   itinerary = signal<Itinerary | null>(null);
-  tab = signal<'route' | 'hotels' | 'flights' | 'budget'>('route');
+  tab = signal<'route' | 'hotels' | 'flights' | 'budget' | 'photos'>('route');
   ctx = signal<TravelContext | null>(null);
   planning = signal(false);
   sharePanel = signal(false);
@@ -388,6 +476,12 @@ export class TripDetail implements OnDestroy {
   deleting = signal(false);
   openDay = signal(1);
   edit = signal(false);
+  /** Погодні попередження (без тих, що я вже сховав). */
+  weatherAlerts = signal<WeatherAlert[]>([]);
+  /** Зростає на SSE-події «photos» — галерея перечитує себе сама. */
+  photoVersion = signal(0);
+  dismissing = signal<string | null>(null);
+  alertDates = computed(() => new Set(this.weatherAlerts().map((a) => a.date)));
 
   private mapEl = viewChild<ElementRef<HTMLDivElement>>('mapEl');
   private map: google.maps.Map | null = null;
@@ -395,6 +489,8 @@ export class TripDetail implements OnDestroy {
   private routeToken = 0;
   private mapsReady = false;
   private dragId: string | null = null;
+  private live: AbortController | null = null;
+  private destroyed = false;
 
   activeDay = computed<ItineraryDay | null>(() => {
     const it = this.itinerary();
@@ -411,10 +507,13 @@ export class TripDetail implements OnDestroy {
     this.wishlist.items().filter((w) => !this.itineraryPlaceIds().has(w.placeId)),
   );
 
-  private readonly catLabels: Record<string, string> = {
-    HOTEL: 'category.HOTEL', RESTAURANT: 'category.RESTAURANT', CAFE: 'category.CAFE', BAR: 'category.BAR', MUSEUM: 'category.MUSEUM',
-    ATTRACTION: 'category.ATTRACTION', PARK: 'category.PARK', BEACH: 'category.BEACH', SHOP: 'category.SHOP', OTHER: 'category.OTHER',
-  };
+  /** Плаский список пунктів маршруту — галерея дає прив'язати фото до місця. */
+  photoPlaces = computed<PhotoPlace[]>(() =>
+    (this.itinerary()?.days ?? []).flatMap((d) =>
+      d.items.map((i) => ({ id: i.id, dayIndex: d.dayIndex, placeName: i.placeName })),
+    ),
+  );
+
 
   constructor() {
     this.load();
@@ -427,6 +526,11 @@ export class TripDetail implements OnDestroy {
         this.drawDay();
       }
     });
+  }
+
+  /** Зовнішнє фото не завантажилось — прибираємо, щоб не світити «битою» іконкою. */
+  hideImage(ev: Event): void {
+    (ev.target as HTMLImageElement).style.display = 'none';
   }
 
   catLabel(c: string): string {
@@ -443,7 +547,8 @@ export class TripDetail implements OnDestroy {
   private apply(obs: Observable<Itinerary>): void {
     obs.subscribe({
       next: (it) => this.itinerary.set(it),
-      error: () => this.error.set('edit.update_error'),
+      // 403 означає, що роль понизили вже після відкриття сторінки.
+      error: (e) => this.error.set(e?.status === 403 ? 'common.forbidden' : 'edit.update_error'),
     });
   }
 
@@ -567,6 +672,8 @@ export class TripDetail implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.live?.abort();
     clearOverlays(this.overlays);
     this.overlays = [];
   }
@@ -575,6 +682,8 @@ export class TripDetail implements OnDestroy {
     this.trips.get(this.id).subscribe({
       next: (t) => {
         this.trip.set(t);
+        this.loadWeatherAlerts();
+        this.watchLive();
         if (t.status === 'PLANNED') {
           this.loadItinerary();
           this.loadContext(t);
@@ -584,7 +693,7 @@ export class TripDetail implements OnDestroy {
           this.streamEvents(this.id);
         }
       },
-      error: () => this.error.set(this.i18n.instant('detail.load_error')),
+      error: () => this.error.set('detail.load_error'),
     });
   }
 
@@ -596,7 +705,7 @@ export class TripDetail implements OnDestroy {
       error: () => {
         this.deleting.set(false);
         this.confirmingDelete.set(false);
-        this.error.set(this.i18n.instant('detail.delete_error'));
+        this.error.set('detail.delete_error');
       },
     });
   }
@@ -608,7 +717,7 @@ export class TripDetail implements OnDestroy {
       next: () => this.streamEvents(this.id),
       error: () => {
         this.planning.set(false);
-        this.error.set(this.i18n.instant('detail.plan_start_error'));
+        this.error.set('detail.plan_start_error');
       },
     });
   }
@@ -631,7 +740,7 @@ export class TripDetail implements OnDestroy {
         },
         error: () => {
           this.planning.set(false);
-          this.error.set(this.i18n.instant('detail.plan_error'));
+          this.error.set('detail.plan_error');
         },
         complete: () => this.planning.set(false),
       });
@@ -682,6 +791,7 @@ export class TripDetail implements OnDestroy {
         this.planning.set(false);
         this.loadItinerary();
         this.loadContext(t);
+        this.loadWeatherAlerts();
       },
       error: () => this.planning.set(false),
     });
@@ -695,7 +805,7 @@ export class TripDetail implements OnDestroy {
   saveExpense(e: ExpenseRequest): void {
     this.trips.addExpense(this.id, e).subscribe({
       next: () => this.tab.set('budget'),
-      error: () => this.error.set(this.i18n.instant('budget.error')),
+      error: () => this.error.set('budget.error'),
     });
   }
 
@@ -743,7 +853,7 @@ export class TripDetail implements OnDestroy {
         this.shareBusy.set(false);
       },
       error: () => {
-        this.error.set(this.i18n.instant('share.error'));
+        this.error.set('share.error');
         this.shareBusy.set(false);
       },
     });
@@ -758,7 +868,7 @@ export class TripDetail implements OnDestroy {
         this.shareBusy.set(false);
       },
       error: () => {
-        this.error.set(this.i18n.instant('share.error'));
+        this.error.set('share.error');
         this.shareBusy.set(false);
       },
     });
@@ -785,6 +895,85 @@ export class TripDetail implements OnDestroy {
 
   selectAll(ev: Event): void {
     (ev.target as HTMLInputElement).select();
+  }
+
+  // ── погодні попередження ──
+
+  private loadWeatherAlerts(): void {
+    this.trips.weatherAlerts(this.id).subscribe({
+      next: (list) => this.weatherAlerts.set(list),
+      // Необовʼязковий шар: якщо бекенд старий чи недоступний, сторінка працює як раніше.
+      error: () => this.weatherAlerts.set([]),
+    });
+  }
+
+  dismissAlert(a: WeatherAlert): void {
+    this.dismissing.set(a.id);
+    this.trips.dismissWeatherAlert(this.id, a.id).subscribe({
+      next: () => {
+        this.weatherAlerts.update((list) => list.filter((x) => x.id !== a.id));
+        this.dismissing.set(null);
+      },
+      error: () => this.dismissing.set(null),
+    });
+  }
+
+  /** Відкрити день попередження. Шукаємо за датою: номер дня міг змінитись після правок. */
+  showDay(a: WeatherAlert): void {
+    const day = this.itinerary()?.days.find((d) => d.date === a.date);
+    this.tab.set('route');
+    this.openDay.set(day?.dayIndex ?? a.dayIndex);
+    setTimeout(() => document.querySelector('.day-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+
+  /**
+   * Живий канал сторінки: коли context-service надішле нову пораду, trip-service
+   * штовхне сюди подію weather-alerts — і список перечитується без перезавантаження.
+   * fetch, а не EventSource, бо EventSource не вміє заголовок Authorization.
+   * Після обриву перепідключаємось із наростаючою паузою.
+   */
+  private async watchLive(): Promise<void> {
+    let delay = 3000;
+    let first = true;
+    while (!this.destroyed) {
+      const ctrl = new AbortController();
+      this.live = ctrl;
+      try {
+        const token = this.auth.token;
+        const res = await fetch(`/api/trips/${this.id}/events`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: ctrl.signal,
+        });
+        // Немає доступу або бекенд без цього каналу — перепідключення не допоможе.
+        if (res.status === 401 || res.status === 403 || res.status === 404) return;
+        if (!res.ok || !res.body) throw new Error(String(res.status));
+        delay = 3000;
+        // Поки канал був закритий, подію могли пропустити — перечитуємо.
+        if (!first) this.loadWeatherAlerts();
+        first = false;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let end = buf.indexOf('\n\n');
+          while (end >= 0) {
+            const block = buf.slice(0, end);
+            buf = buf.slice(end + 2);
+            if (/^event:\s*weather-alerts\s*$/m.test(block)) this.loadWeatherAlerts();
+            if (/^event:\s*photos\s*$/m.test(block)) this.photoVersion.update((v) => v + 1);
+            end = buf.indexOf('\n\n');
+          }
+        }
+      } catch {
+        if (this.destroyed) return;
+        delay = Math.min(delay * 2, 60000);
+      }
+      if (this.destroyed) return;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
   private loadItinerary() {

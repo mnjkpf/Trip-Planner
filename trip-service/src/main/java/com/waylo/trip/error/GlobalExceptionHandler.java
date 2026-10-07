@@ -1,5 +1,6 @@
 package com.waylo.trip.error;
 
+import com.waylo.trip.error.ApiExceptions.ServiceUnavailableException;
 import com.waylo.trip.error.ApiExceptions.TripConflictException;
 import com.waylo.trip.error.ApiExceptions.TripForbiddenException;
 import com.waylo.trip.error.ApiExceptions.TripNotFoundException;
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TripConflictException.class)
     public ProblemDetail handleConflict(TripConflictException e) {
         return problem(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    // Сусідній сервіс лежить — це не вина запиту, тож 503, а не 4xx.
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ProblemDetail handleUnavailable(ServiceUnavailableException e) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
     // Крос-польова валідація в сервісі (напр. endDate < startDate).

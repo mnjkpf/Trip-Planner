@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -217,6 +218,21 @@ interface ExpenseGroup {
     }
     .r-del:hover { color: #d92d20; }
     .empty { padding: 4px 0; }
+
+    /* На телефоні фіксовані 96px під категорію й числа праворуч стискають
+       назву до пари літер — краще віддати назві весь рядок. */
+    @media (max-width: 560px) {
+      .budget { padding: 14px 14px; }
+      .row { flex-wrap: wrap; gap: 6px; }
+      .r-cat { order: 1; flex: 0 0 auto; }
+      .r-sum { order: 2; margin-left: auto; }
+      .r-del { order: 3; }
+      .r-title { order: 4; flex: 1 0 100%; }
+      .cat-name { flex: 0 0 86px; font-size: 11px; }
+      .add-grid > * { flex: 1 1 100%; }
+      .add-grid input[type='number'], .add-grid .cur { flex: 1 1 calc(50% - 4px); width: auto; }
+      .plan-inputs input, .plan-inputs .cur { flex: 1 1 calc(50% - 4px); width: auto; }
+    }
   `],
 })
 export class TripBudget implements OnInit {
@@ -347,8 +363,10 @@ export class TripBudget implements OnInit {
         this.busy.set(false);
         after?.();
       },
-      error: () => {
-        this.error.set('budget.error');
+      error: (e: HttpErrorResponse) => {
+        // 403 — роль понизили, поки сторінка була відкрита: кнопки ще на місці,
+        // а прав уже немає. Загальне «не вдалося» тут нічого не пояснює.
+        this.error.set(e?.status === 403 ? 'common.forbidden' : 'budget.error');
         this.busy.set(false);
       },
     });

@@ -1,0 +1,70 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: media-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  # Власної БД немає навмисно: байти живуть у MinIO, посилання на них — у
+  # trip-service, а тікети на завантаження короткоживучі й лежать у Redis.
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: media-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+
+  servlet:
+    multipart:
+      # Жорсткий стоп на рівні контейнера; реальний ліміт кожного файлу —
+      # у тікеті (app.media.max-bytes), і його перевіряє MediaService.
+      max-file-size: 12MB
+      max-request-size: 13MB
+
+app:
+  topics:
+    media-uploaded: media.uploaded
+    media-ready: media.ready
+    media-delete-requested: media.delete.requested
+  media:
+    bucket: ${S3_BUCKET:waylo-media}
+    max-bytes: 10485760          # 10 МіБ
+    ticket-ttl: PT15M
+    # Довга сторона мініатюри. 640 вистачає і для сітки, і для ретіни.
+    thumb-max-px: 640
+    thumb-quality: 0.82
+    content-types: image/jpeg,image/png,image/webp
+
+# Будь-яке S3-сумісне сховище. Локально це SeaweedFS (див. docker-compose),
+# клієнтом лишається MinIO SDK — він просто S3-клієнт.
+storage:
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:waylo}
+    secret-key: ${S3_SECRET_KEY:waylo-local-secret}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

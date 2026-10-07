@@ -26,7 +26,8 @@
     "error": "Fehler",
     "close": "Schließen",
     "optional": "optional",
-    "sending": "Senden…"
+    "sending": "Senden…",
+    "forbidden": "Nicht genug Rechte für diese Aktion"
   },
   "auth": {
     "login_title": "Anmelden",
@@ -126,7 +127,8 @@
     "route": "Route",
     "hotels": "Hotels",
     "flights": "Flüge",
-    "budget": "Budget"
+    "budget": "Budget",
+    "photos": "Fotos"
   },
   "day": {
     "label": "Tag",
@@ -385,5 +387,38 @@
     "not_found": "Kein Konto mit dieser E-Mail",
     "already": "Diese Person hat bereits Zugriff",
     "error": "Zugriff konnte nicht aktualisiert werden"
+  },
+  "weather": {
+    "title": "Wetterhinweis",
+    "only_advice": "Nur ein Vorschlag — dein Plan bleibt unverändert.",
+    "rain_on": "Tag {{day}} ({{date}}): Regen erwartet, ~{{mm}} mm",
+    "heavy_rain_on": "Tag {{day}} ({{date}}): Starkregen erwartet, ~{{mm}} mm",
+    "outdoor_plan": "An diesem Tag ist vor allem Programm im Freien geplant: {{places}}.",
+    "swap_hint": "Tag {{day}} ({{date}}) wird trockener (~{{mm}} mm) und hat weniger Programm im Freien — überleg dir, die beiden Tage zu tauschen.",
+    "no_swap": "Auf dieser Reise gibt es keinen trockeneren Tag mit weniger Programm im Freien — nimm einen Schirm mit oder tausche einen Park gegen ein Museum.",
+    "show_day": "Tag anzeigen",
+    "dismiss": "Verstanden",
+    "day_mark": "An diesem Tag wird Regen erwartet"
+  },
+  "photos": {
+    "title": "Fotos",
+    "add": "Fotos hinzufügen",
+    "uploading": "Wird hochgeladen…",
+    "hint": "JPEG, PNG oder WebP, je bis zu 10 MB. Vorschaubilder entstehen im Hintergrund.",
+    "place": "Ort",
+    "place_none": "Ohne Ort",
+    "empty": "Noch keine Fotos. Füge das erste hinzu.",
+    "empty_viewer": "In dieser Reise gibt es noch keine Fotos.",
+    "delete": "Foto löschen",
+    "prev": "Vorheriges",
+    "next": "Nächstes",
+    "load_error": "Fotos konnten nicht geladen werden",
+    "upload_error": "Upload fehlgeschlagen",
+    "too_large": "Datei ist zu groß (maximal 10 MB)",
+    "wrong_type": "Unterstützt werden nur JPEG, PNG und WebP",
+    "forbidden": "Du kannst zu dieser Reise keine Fotos hinzufügen",
+    "unavailable": "Der Fotospeicher ist nicht erreichbar — versuch es später",
+    "delete_error": "Foto konnte nicht gelöscht werden",
+    "delete_forbidden": "Löschen kann nur, wer das Foto hinzugefügt hat, oder der Besitzer der Reise"
   }
 }

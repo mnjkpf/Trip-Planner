@@ -26,7 +26,8 @@
     "error": "Errore",
     "close": "Chiudi",
     "optional": "facoltativo",
-    "sending": "Invio…"
+    "sending": "Invio…",
+    "forbidden": "Permessi insufficienti per questa azione"
   },
   "auth": {
     "login_title": "Accedi",
@@ -126,7 +127,8 @@
     "route": "Percorso",
     "hotels": "Hotel",
     "flights": "Voli",
-    "budget": "Budget"
+    "budget": "Budget",
+    "photos": "Foto"
   },
   "day": {
     "label": "Giorno",
@@ -385,5 +387,38 @@
     "not_found": "Nessun account con questa email",
     "already": "Questa persona ha già accesso",
     "error": "Impossibile aggiornare l'accesso"
+  },
+  "weather": {
+    "title": "Avviso meteo",
+    "only_advice": "È solo un suggerimento: il tuo itinerario resta invariato.",
+    "rain_on": "Giorno {{day}} ({{date}}): prevista pioggia, ~{{mm}} mm",
+    "heavy_rain_on": "Giorno {{day}} ({{date}}): previsti forti rovesci, ~{{mm}} mm",
+    "outdoor_plan": "Quel giorno il programma è soprattutto all'aperto: {{places}}.",
+    "swap_hint": "Il giorno {{day}} ({{date}}) sarà più asciutto (~{{mm}} mm) e ha meno tappe all'aperto: valuta di scambiare questi due giorni.",
+    "no_swap": "In questo viaggio non c'è un giorno più asciutto con meno tappe all'aperto: porta un ombrello o sostituisci un parco con un museo.",
+    "show_day": "Mostra il giorno",
+    "dismiss": "Ho capito",
+    "day_mark": "Prevista pioggia in questo giorno"
+  },
+  "photos": {
+    "title": "Foto",
+    "add": "Aggiungi foto",
+    "uploading": "Caricamento…",
+    "hint": "JPEG, PNG o WebP, fino a 10 MB ciascuna. Le anteprime vengono create in background.",
+    "place": "Luogo",
+    "place_none": "Senza luogo",
+    "empty": "Ancora nessuna foto. Aggiungi la prima.",
+    "empty_viewer": "Questo viaggio non ha ancora foto.",
+    "delete": "Elimina foto",
+    "prev": "Precedente",
+    "next": "Successiva",
+    "load_error": "Impossibile caricare le foto",
+    "upload_error": "Caricamento non riuscito",
+    "too_large": "File troppo grande (massimo 10 MB)",
+    "wrong_type": "Sono supportati solo JPEG, PNG e WebP",
+    "forbidden": "Non puoi aggiungere foto a questo viaggio",
+    "unavailable": "L'archivio foto non è disponibile: riprova più tardi",
+    "delete_error": "Impossibile eliminare la foto",
+    "delete_forbidden": "Può eliminarla solo chi ha aggiunto la foto o il proprietario del viaggio"
   }
 }

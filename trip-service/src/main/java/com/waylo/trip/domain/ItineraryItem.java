@@ -55,6 +55,10 @@ public class ItineraryItem {
     @Column(name = "snapshot_at", nullable = false)
     private Instant snapshotAt;
 
+    /** Коли востаннє питали place-service про фото. null — ще не питали (див. V10). */
+    @Column(name = "image_checked_at")
+    private Instant imageCheckedAt;
+
     @Column(name = "order_index", nullable = false)
     private int orderIndex;
 

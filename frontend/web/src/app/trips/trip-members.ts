@@ -93,6 +93,13 @@ import { TripService } from '../core/trip.service';
     }
     .r-del:hover { color: #d92d20; }
     .r-spacer { flex: none; width: 1px; }
+
+    @media (max-width: 560px) {
+      .row { flex-wrap: wrap; gap: 6px; }
+      .r-mail { flex: 1 0 100%; }
+      .r-role, .r-badge { width: auto; flex: 1 1 auto; }
+      .invite input, .invite select, .invite .btn { flex: 1 1 100%; }
+    }
   `],
 })
 export class TripMembers implements OnInit {

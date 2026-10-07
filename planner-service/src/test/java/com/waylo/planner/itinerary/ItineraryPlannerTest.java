@@ -19,7 +19,7 @@ class ItineraryPlannerTest {
 
     private List<PlaceDto> places(int n) {
         return java.util.stream.IntStream.rangeClosed(1, n)
-                .mapToObj(i -> new PlaceDto("id-" + i, "Place " + i, "ATTRACTION", 10.0 + i, 20.0 + i))
+                .mapToObj(i -> new PlaceDto("id-" + i, "Place " + i, "ATTRACTION", 10.0 + i, 20.0 + i, null))
                 .toList();
     }
 

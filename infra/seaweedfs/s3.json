@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "waylo",
+      "credentials": [
+        {
+          "accessKey": "waylo",
+          "secretKey": "waylo-local-secret"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

@@ -11,8 +11,14 @@ public interface PlaceEnricher {
     boolean isEnabled();
 
     /**
-     * Шукає фото для місця за його назвою. null — якщо нічого не знайшли
-     * (немає статті, стаття неоднозначна, або сервіс недоступний).
+     * Шукає фото для місця за назвою й містом. Місто — підказка для пошуку:
+     * стаття часто називається «National Botanic Gardens, Dublin», і за голою
+     * назвою не знаходиться.
+     *
+     * @return null, якщо статті немає або в ній немає зображення — це остаточна
+     *         відповідь, її можна кешувати
+     * @throws EnrichmentUnavailableException якщо відповіді не отримали взагалі
+     *         (таймаут, 429, 5xx) — тоді спробувати треба буде ще раз
      */
-    PlaceImage fetchImage(String name);
+    PlaceImage fetchImage(String name, String city);
 }

@@ -7,6 +7,7 @@ import com.waylo.trip.domain.PlanJobStatus;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripDay;
 import com.waylo.trip.domain.TripStatus;
+import com.waylo.trip.outbox.ItinerarySnapshots;
 import com.waylo.trip.repository.ItineraryItemRepository;
 import com.waylo.trip.repository.PlanJobRepository;
 import com.waylo.trip.repository.TripDayRepository;
@@ -43,17 +44,20 @@ public class PlanResultService {
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
     private final ApplicationEventPublisher events;
+    private final ItinerarySnapshots snapshots;
 
     public PlanResultService(PlanJobRepository planJobRepository,
                              TripRepository tripRepository,
                              TripDayRepository tripDayRepository,
                              ItineraryItemRepository itineraryItemRepository,
-                             ApplicationEventPublisher events) {
+                             ApplicationEventPublisher events,
+                             ItinerarySnapshots snapshots) {
         this.planJobRepository = planJobRepository;
         this.tripRepository = tripRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
         this.events = events;
+        this.snapshots = snapshots;
     }
 
     @Transactional
@@ -99,6 +103,10 @@ public class PlanResultService {
                         .placeCategory(item.category())
                         .placeLat(item.lat())
                         .placeLon(item.lon())
+                        .placeImageUrl(item.imageUrl())
+                        // Планувальник уже питав place-service, тож фонове
+                        // дозаповнення цей пункт більше не чіпатиме.
+                        .imageCheckedAt(now)
                         .snapshotAt(now)
                         .orderIndex(item.order())
                         .plannedStart(parseTime(item.plannedStart()))
@@ -119,6 +127,9 @@ public class PlanResultService {
 
         trip.setStatus(TripStatus.PLANNED);
         tripRepository.save(trip);
+
+        // Новий маршрут → знімок для context-service (та сама транзакція, через outbox)
+        snapshots.publish(trip);
 
         // SSE-підписники дізнаються ПІСЛЯ коміту (AFTER_COMMIT), щоб дані вже були в БД
         events.publishEvent(new PlanCompletedInternal(tripId));

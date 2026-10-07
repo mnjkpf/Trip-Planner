@@ -3,6 +3,7 @@ package com.waylo.gateway.config;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import reactor.core.publisher.Mono;
 
@@ -14,6 +15,22 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class RateLimitConfig {
 
+    /**
+     * Окремий бакет для картинок. Той самий користувач, але інший ключ — тож
+     * галерея з десятками мініатюр не з'їдає ліміт решти API (і навпаки).
+     */
+    @Bean
+    public KeyResolver mediaKeyResolver() {
+        KeyResolver base = userKeyResolver();
+        return exchange -> base.resolve(exchange).map(key -> "media:" + key);
+    }
+
+    /**
+     * @Primary обовʼязковий: фабрика RequestRateLimiter інжектить KeyResolver ЗА ТИПОМ,
+     * а біна тепер два. Без явного «головного» gateway не підніметься взагалі —
+     * впаде на NoUniqueBeanDefinitionException ще до першого запиту.
+     */
+    @Primary
     @Bean
     public KeyResolver userKeyResolver() {
         return exchange -> exchange.getPrincipal()

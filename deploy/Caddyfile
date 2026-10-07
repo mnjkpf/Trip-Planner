@@ -1,0 +1,29 @@
+# Єдина точка входу ззовні. Caddy сам отримує й оновлює сертифікат Let's Encrypt —
+# саме тому домен має вказувати на цю машину ДО першого запуску.
+#
+# Назовні стирчить лише він: усі сервіси сидять у внутрішній docker-мережі й
+# портів на хост не публікують.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	# SSE (погодні поради, готовність маршруту) — довгі з'єднання, які не можна
+	# буферизувати: інакше подія доїде до браузера аж на закритті потоку.
+	@sse path /api/trips/*/events /api/trips/*/plan-events
+	reverse_proxy @sse api-gateway:8080 {
+		flush_interval -1
+	}
+
+	reverse_proxy api-gateway:8080
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+	}
+}

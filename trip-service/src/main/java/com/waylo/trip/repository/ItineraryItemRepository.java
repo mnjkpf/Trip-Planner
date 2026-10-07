@@ -13,4 +13,7 @@ public interface ItineraryItemRepository extends JpaRepository<ItineraryItem, UU
 
     /** Усі пункти, що посилаються на placeId (використовується рідко, напр. для сповіщень). */
     List<ItineraryItem> findByPlaceId(String placeId);
+
+    /** Пункти, для яких фото ще не шукали — найсвіжіші маршрути першими. */
+    List<ItineraryItem> findTop50ByImageCheckedAtIsNullOrderBySnapshotAtDesc();
 }

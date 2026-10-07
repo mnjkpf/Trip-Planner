@@ -26,7 +26,8 @@
     "error": "Błąd",
     "close": "Zamknij",
     "optional": "opcjonalnie",
-    "sending": "Wysyłanie…"
+    "sending": "Wysyłanie…",
+    "forbidden": "Za mało uprawnień do tej akcji"
   },
   "auth": {
     "login_title": "Zaloguj się",
@@ -126,7 +127,8 @@
     "route": "Trasa",
     "hotels": "Hotele",
     "flights": "Loty",
-    "budget": "Budżet"
+    "budget": "Budżet",
+    "photos": "Zdjęcia"
   },
   "day": {
     "label": "Dzień",
@@ -385,5 +387,38 @@
     "not_found": "Nie ma konta z tym adresem",
     "already": "Ta osoba już ma dostęp",
     "error": "Nie udało się zaktualizować dostępu"
+  },
+  "weather": {
+    "title": "Ostrzeżenie pogodowe",
+    "only_advice": "To tylko sugestia — plan pozostaje bez zmian.",
+    "rain_on": "Dzień {{day}} ({{date}}): spodziewany deszcz, ~{{mm}} mm",
+    "heavy_rain_on": "Dzień {{day}} ({{date}}): spodziewana ulewa, ~{{mm}} mm",
+    "outdoor_plan": "Tego dnia w planie głównie miejsca na świeżym powietrzu: {{places}}.",
+    "swap_hint": "Dzień {{day}} ({{date}}) zapowiada się suchszy (~{{mm}} mm) i ma mniej punktów na zewnątrz — warto rozważyć zamianę tych dni.",
+    "no_swap": "W tej podróży nie ma suchszego dnia z mniejszą liczbą punktów na zewnątrz — weź parasol albo zamień park na muzeum.",
+    "show_day": "Pokaż dzień",
+    "dismiss": "Rozumiem",
+    "day_mark": "Tego dnia spodziewany deszcz"
+  },
+  "photos": {
+    "title": "Zdjęcia",
+    "add": "Dodaj zdjęcia",
+    "uploading": "Wysyłanie…",
+    "hint": "JPEG, PNG lub WebP, do 10 MB każde. Miniatury powstają w tle.",
+    "place": "Miejsce",
+    "place_none": "Bez miejsca",
+    "empty": "Nie ma jeszcze zdjęć. Dodaj pierwsze.",
+    "empty_viewer": "W tej podróży nie ma jeszcze zdjęć.",
+    "delete": "Usuń zdjęcie",
+    "prev": "Poprzednie",
+    "next": "Następne",
+    "load_error": "Nie udało się wczytać zdjęć",
+    "upload_error": "Nie udało się wysłać pliku",
+    "too_large": "Plik jest za duży (maksymalnie 10 MB)",
+    "wrong_type": "Obsługiwane są tylko JPEG, PNG i WebP",
+    "forbidden": "Nie możesz dodawać zdjęć do tej podróży",
+    "unavailable": "Magazyn zdjęć jest niedostępny — spróbuj później",
+    "delete_error": "Nie udało się usunąć zdjęcia",
+    "delete_forbidden": "Zdjęcie może usunąć osoba, która je dodała, albo właściciel podróży"
   }
 }

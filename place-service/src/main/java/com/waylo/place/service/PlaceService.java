@@ -6,6 +6,7 @@ import com.waylo.place.domain.PlaceExternalRef;
 import com.waylo.place.dto.CitySuggestion;
 import com.waylo.place.dto.PlaceResponse;
 import com.waylo.place.error.ApiExceptions.PlaceNotFoundException;
+import com.waylo.place.provider.EnrichmentUnavailableException;
 import com.waylo.place.provider.PlaceCandidate;
 import com.waylo.place.provider.GeocodeProvider;
 import com.waylo.place.provider.PlaceEnricher;
@@ -135,15 +136,19 @@ public class PlaceService {
 
     /**
      * Одноразова спроба дотягнути фото через провайдера деталей (Wikipedia — за назвою
-     * місця). enriched_at ставимо ЗАВЖДИ (навіть без фото), щоб не смикати провайдера
-     * повторно на кожен перегляд місця без зображення. Помилку ковтаємо.
+     * місця й містом).
+     *
+     * enriched_at ставимо, коли отримали ВІДПОВІДЬ — навіть якщо фото в ній немає:
+     * «статті не існує» це теж знання, і смикати провайдера повторно немає сенсу.
+     * А от якщо провайдер не відповів (таймаут, 429, 5xx), позначку НЕ ставимо —
+     * інакше випадковий збій назавжди залишив би місце без фото.
      */
     private void enrichImage(Place p) {
         if (!placeEnricher.isEnabled()) {
             return;   // без ключа не позначаємо enriched_at — спробуємо, коли ключ додадуть
         }
         try {
-            PlaceImage img = placeEnricher.fetchImage(p.getName());
+            PlaceImage img = placeEnricher.fetchImage(p.getName(), p.getCity());
             if (img != null) {
                 if (img.imageUrl() != null) {
                     p.setImageUrl(img.imageUrl());
@@ -152,10 +157,13 @@ public class PlaceService {
                     p.setWikidataId(img.wikidataId());
                 }
             }
+            p.setEnrichedAt(Instant.now());
+        } catch (EnrichmentUnavailableException e) {
+            log.warn("збагачення фото відкладено для {}: {}", p.getId(), e.getMessage());
         } catch (Exception e) {
             log.warn("збагачення фото не вдалося для {}: {}", p.getId(), e.getMessage());
+            p.setEnrichedAt(Instant.now());
         }
-        p.setEnrichedAt(Instant.now());
     }
 
     private PlaceResponse toResponse(Place p) {

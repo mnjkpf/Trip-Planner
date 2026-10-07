@@ -5,6 +5,7 @@ import com.waylo.trip.domain.ItineraryItem;
 import com.waylo.trip.domain.Trip;
 import com.waylo.trip.domain.TripDay;
 import com.waylo.trip.domain.TripRole;
+import com.waylo.trip.domain.TripPhoto;
 import com.waylo.trip.domain.TripShare;
 import com.waylo.trip.dto.ShareLinkResponse;
 import com.waylo.trip.dto.SharedTripResponse;
@@ -45,17 +46,20 @@ public class ShareService {
     private final TripShareRepository shareRepository;
     private final TripDayRepository tripDayRepository;
     private final ItineraryItemRepository itineraryItemRepository;
+    private final PhotoService photoService;
     private final TripAccess access;
 
     public ShareService(TripRepository tripRepository,
                         TripShareRepository shareRepository,
                         TripDayRepository tripDayRepository,
                         ItineraryItemRepository itineraryItemRepository,
+                        PhotoService photoService,
                         TripAccess access) {
         this.tripRepository = tripRepository;
         this.shareRepository = shareRepository;
         this.tripDayRepository = tripDayRepository;
         this.itineraryItemRepository = itineraryItemRepository;
+        this.photoService = photoService;
         this.access = access;
     }
 
@@ -117,6 +121,12 @@ public class ShareService {
                 .map(this::toDay)
                 .toList();
 
+        // Фото показуємо: посилання для того й створюють, щоб показати подорож.
+        // Якщо колись знадобиться «маршрут без фото» — вимикається саме тут.
+        List<SharedTripResponse.Photo> photos = photoService.readyForTrip(trip.getId()).stream()
+                .map(ShareService::toPhoto)
+                .toList();
+
         return new SharedTripResponse(
                 trip.getTitle(),
                 trip.getDestinationName(),
@@ -125,7 +135,15 @@ public class ShareService {
                 trip.getDestinationLon(),
                 trip.getStartDate(),
                 trip.getEndDate(),
-                days);
+                days,
+                photos);
+    }
+
+    private static SharedTripResponse.Photo toPhoto(TripPhoto p) {
+        return new SharedTripResponse.Photo(
+                "/api/media/" + p.getMediaId(),
+                "/api/media/" + p.getMediaId() + "/thumb",
+                p.getCaption(), p.getPlaceName(), p.getWidth(), p.getHeight());
     }
 
     private SharedTripResponse.Day toDay(TripDay d) {
@@ -145,7 +163,7 @@ public class ShareService {
                     i.getOrderIndex(), i.getPlaceName(), i.getPlaceCategory(),
                     i.getPlaceLat(), i.getPlaceLon(),
                     fmtTime(i.getPlannedStart()), i.getDwellMinutes(),
-                    i.getTravelMinutesFromPrev(), i.getNote()));
+                    i.getTravelMinutesFromPrev(), i.getNote(), i.getPlaceImageUrl()));
             prev = i;
         }
         double km = Math.round(meters / 100.0) / 10.0;

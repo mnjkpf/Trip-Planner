@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Budget,
@@ -11,10 +11,13 @@ import {
   PlanJob,
   ShareLink,
   SharedTrip,
+  PhotoUploadTicket,
   TripMember,
+  TripPhoto,
   TravelContext,
   Trip,
   UpdateTripRequest,
+  WeatherAlert,
 } from './models';
 
 /** Усе ходить через gateway (проксі /api -> :8080). */
@@ -144,5 +147,41 @@ export class TripService {
 
   removeMember(tripId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/trips/${tripId}/members/${memberId}`);
+  }
+
+  // ── погодні попередження (лише поради, маршрут не міняють) ──
+
+  weatherAlerts(tripId: string): Observable<WeatherAlert[]> {
+    return this.http.get<WeatherAlert[]>(`/api/trips/${tripId}/weather-alerts`);
+  }
+
+  dismissWeatherAlert(tripId: string, alertId: string): Observable<void> {
+    return this.http.post<void>(`/api/trips/${tripId}/weather-alerts/${alertId}/dismiss`, {});
+  }
+
+  // ── фото ──
+
+  photos(tripId: string): Observable<TripPhoto[]> {
+    return this.http.get<TripPhoto[]>(`/api/trips/${tripId}/photos`);
+  }
+
+  /** Крок 1: питаємо дозвіл. Права перевіряє trip-service, байти сюди не йдуть. */
+  photoTicket(tripId: string, body: { itemId?: string | null; caption?: string | null }): Observable<PhotoUploadTicket> {
+    return this.http.post<PhotoUploadTicket>(`/api/trips/${tripId}/photos/upload-ticket`, body);
+  }
+
+  /**
+   * Крок 2: сам файл — напряму в media-service. observe:'events' потрібен для
+   * смужки прогресу: великі фото з телефона їдуть відчутно довго.
+   */
+  uploadPhoto(ticket: PhotoUploadTicket, file: File): Observable<HttpEvent<unknown>> {
+    const form = new FormData();
+    form.append('ticket', ticket.ticket);
+    form.append('file', file);
+    return this.http.post(ticket.uploadPath, form, { reportProgress: true, observe: 'events' });
+  }
+
+  deletePhoto(tripId: string, photoId: string): Observable<void> {
+    return this.http.delete<void>(`/api/trips/${tripId}/photos/${photoId}`);
   }
 }

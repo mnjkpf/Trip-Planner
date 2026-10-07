@@ -23,9 +23,11 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -69,9 +71,9 @@ class PlanLoopIntegrationTest {
     void requested_isPlanned_andCompletedEventEmitted_withContext() throws Exception {
         Mockito.when(placeClient.searchNearby(anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(List.of(
-                        new PlaceDto("p1", "Colosseum", "ATTRACTION", 41.89, 12.49),
-                        new PlaceDto("p2", "Vatican", "MUSEUM", 41.90, 12.45),
-                        new PlaceDto("p3", "Trevi Fountain", "ATTRACTION", 41.90, 12.48)));
+                        new PlaceDto("p1", "Colosseum", "ATTRACTION", 41.89, 12.49, "https://example.test/colosseum.jpg"),
+                        new PlaceDto("p2", "Vatican", "MUSEUM", 41.90, 12.45, null),
+                        new PlaceDto("p3", "Trevi Fountain", "ATTRACTION", 41.90, 12.48, null)));
         Mockito.when(contextClient.fetch(anyDouble(), anyDouble(), any(), any()))
                 .thenReturn(new DestinationContext("SUMMER", "Спекотно вдень — бери воду"));
 
@@ -105,5 +107,10 @@ class PlanLoopIntegrationTest {
         List<Map<String, Object>> day1 = (List<Map<String, Object>>) days.get(0).get("items");
         List<Map<String, Object>> day2 = (List<Map<String, Object>>) days.get(1).get("items");
         assertEquals(3, day1.size() + day2.size());
+
+        // Фото місця їде разом із маршрутом — trip-service більше нікуди за ним не ходить.
+        boolean hasPhoto = Stream.concat(day1.stream(), day2.stream())
+                .anyMatch(i -> "https://example.test/colosseum.jpg".equals(i.get("imageUrl")));
+        assertTrue(hasPhoto, "imageUrl має потрапити в подію trip.plan.completed");
     }
 }
