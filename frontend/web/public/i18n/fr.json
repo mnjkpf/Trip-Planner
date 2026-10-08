@@ -7,8 +7,9 @@
     "trips": "Mes voyages",
     "wishlist": "Liste de souhaits",
     "places": "Lieux",
-    "journal": "Journal",
     "logout": "Déconnexion",
+    "sign_in": "Se connecter",
+    "guest_hint": "Connecte-toi pour planifier des voyages et enregistrer des lieux",
     "language": "Langue"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Inscription échouée",
     "or": "ou",
     "google_error": "Connexion Google échouée",
-    "google_load_error": "Impossible de charger la connexion Google"
+    "google_load_error": "Impossible de charger la connexion Google",
+    "browse_as_guest": "Parcourir les lieux sans compte"
   },
   "trips": {
     "title": "Mes voyages",

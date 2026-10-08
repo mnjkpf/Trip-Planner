@@ -7,8 +7,9 @@
     "trips": "Moje podróże",
     "wishlist": "Lista życzeń",
     "places": "Miejsca",
-    "journal": "Dziennik zdarzeń",
     "logout": "Wyloguj się",
+    "sign_in": "Zaloguj się",
+    "guest_hint": "Zaloguj się, aby planować podróże i zapisywać miejsca",
     "language": "Język"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Rejestracja nie powiodła się",
     "or": "lub",
     "google_error": "Logowanie przez Google nie powiodło się",
-    "google_load_error": "Nie udało się załadować logowania Google"
+    "google_load_error": "Nie udało się załadować logowania Google",
+    "browse_as_guest": "Przeglądaj miejsca bez konta"
   },
   "trips": {
     "title": "Moje podróże",

@@ -1,8 +1,9 @@
 import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { createMap, dotMarker, loadMaps } from '../core/map';
+import { AuthService } from '../core/auth.service';
 import { PlaceService } from '../core/place.service';
 import { WishlistService } from '../core/wishlist.service';
 import { Place } from '../core/models';
@@ -80,6 +81,8 @@ export class PlaceDetail implements OnDestroy {
   private route = inject(ActivatedRoute);
   private placesApi = inject(PlaceService);
   protected wishlist = inject(WishlistService);
+  protected auth = inject(AuthService);
+  private router = inject(Router);
   private mapEl = viewChild<ElementRef<HTMLDivElement>>('mapEl');
   private map: google.maps.Map | null = null;
 
@@ -103,6 +106,11 @@ export class PlaceDetail implements OnDestroy {
   label(c: string): string { return this.i18n.instant('category.' + c) || c; }
 
   toggleSave(p: Place): void {
+    // Гість не має вішлісту — відправляємо на логін замість 401.
+    if (!this.auth.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
     if (this.wishlist.savedIds().has(p.id)) {
       this.wishlist.remove(p.id).subscribe();
     } else {
