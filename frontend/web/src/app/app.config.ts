@@ -9,16 +9,17 @@ import { authInterceptor } from './core/auth.interceptor';
 import { LANGS } from './core/lang.service';
 
 /**
- * Визначаємо стартову мову ще до bootstrap (localStorage → браузер → EN) —
- * щоб перший рендер уже був перекладений, без миготіння сирих ключів.
+ * Визначаємо стартову мову ще до bootstrap, щоб перший рендер уже був
+ * перекладений, без миготіння сирих ключів. Мова браузера НЕ враховується:
+ * англійська — єдиний дефолт для всіх, доки користувач не вибере інше явно
+ * (вибір живе в localStorage, а для залогінених — у профілі на бекенді).
  */
 function pickInitialLang(): string {
   try {
     const saved = localStorage.getItem('tp.lang');
     if (saved && LANGS.some((l) => l.code === saved)) return saved;
   } catch { /* private mode */ }
-  const browser = (navigator.language || '').slice(0, 2).toLowerCase();
-  return LANGS.some((l) => l.code === browser) ? browser : 'en';
+  return 'en';
 }
 
 export const appConfig: ApplicationConfig = {

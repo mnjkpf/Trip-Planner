@@ -9,7 +9,11 @@
     "places": "Lieux",
     "journal": "Journal",
     "logout": "Déconnexion",
-    "language": "Langue"
+    "language": "Langue",
+    "plan_trip": "Planifier",
+    "guest_unsaved": "Session invité — tes voyages ne sont pas encore liés à un compte",
+    "save_account": "Enregistrer avec un compte",
+    "discard_guest": "Abandonner la session"
   },
   "common": {
     "loading": "Chargement…",
@@ -47,7 +51,10 @@
     "register_error": "Inscription échouée",
     "or": "ou",
     "google_error": "Connexion Google échouée",
-    "google_load_error": "Impossible de charger la connexion Google"
+    "google_load_error": "Impossible de charger la connexion Google",
+    "claim_title": "Enregistre tes voyages",
+    "claim_subtitle": "Crée un compte et tout ce que tu as planifié en invité te suit",
+    "claim_btn": "Créer un compte et garder mes voyages"
   },
   "trips": {
     "title": "Mes voyages",

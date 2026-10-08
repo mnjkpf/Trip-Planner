@@ -26,6 +26,16 @@ public class RateLimitConfig {
     }
 
     /**
+     * Свій бакет для гостьового входу: кожен виклик створює рядок у users,
+     * тож ліміт має бути суворішим за логін — і не ділити з ним лічильник.
+     */
+    @Bean
+    public KeyResolver guestKeyResolver() {
+        KeyResolver base = userKeyResolver();
+        return exchange -> base.resolve(exchange).map(key -> "guest:" + key);
+    }
+
+    /**
      * @Primary обовʼязковий: фабрика RequestRateLimiter інжектить KeyResolver ЗА ТИПОМ,
      * а біна тепер два. Без явного «головного» gateway не підніметься взагалі —
      * впаде на NoUniqueBeanDefinitionException ще до першого запиту.

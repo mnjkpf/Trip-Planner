@@ -42,9 +42,13 @@ class AuthFlowIntegrationTest extends IntegrationTestBase {
 
     // sub у access-токені = user.id (те, що gateway кладе в X-User-Id)
     private String subjectOf(String jwt) {
+        return (String) claimOf(jwt, "sub");
+    }
+
+    private Object claimOf(String jwt, String name) {
         String[] parts = jwt.split("\\.");
         String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-        return (String) asMap(payload).get("sub");
+        return asMap(payload).get(name);
     }
 
     @Test
@@ -168,5 +172,92 @@ class AuthFlowIntegrationTest extends IntegrationTestBase {
         assertEquals("waylo-key", first.get("kid"));
         // приватної частини (d) у JWKS бути НЕ повинно
         assertFalse(first.containsKey("d"));
+    }
+
+    @Test
+    void guest_getsUsableToken_markedAsGuest() throws Exception {
+        MvcResult res = mockMvc.perform(post("/api/auth/guest"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String access = (String) asMap(res.getResponse().getContentAsString()).get("accessToken");
+        assertNotNull(access);
+        // Прапорець у токені — те, за чим фронт вирішує показувати «зберегти акаунт».
+        assertEquals(Boolean.TRUE, claimOf(access, "guest"));
+        // Гість — повноцінний користувач: саме його id поїде в X-User-Id,
+        // тож подорожі прив'яжуться до нього так само, як до зареєстрованого.
+        assertNotNull(subjectOf(access));
+    }
+
+    @Test
+    void guest_everyCallMakesDistinctAccount() throws Exception {
+        String first = subjectOf((String) asMap(mockMvc.perform(post("/api/auth/guest"))
+                .andReturn().getResponse().getContentAsString()).get("accessToken"));
+        String second = subjectOf((String) asMap(mockMvc.perform(post("/api/auth/guest"))
+                .andReturn().getResponse().getContentAsString()).get("accessToken"));
+
+        assertNotEquals(first, second);
+    }
+
+    @Test
+    void claimGuest_keepsSameUserId_soTripsSurvive() throws Exception {
+        MvcResult guest = mockMvc.perform(post("/api/auth/guest")).andReturn();
+        String guestAccess = (String) asMap(guest.getResponse().getContentAsString()).get("accessToken");
+        String guestId = subjectOf(guestAccess);
+
+        String email = uniqueEmail();
+        MvcResult claimed = mockMvc.perform(post("/api/user/claim-guest")
+                        .header("X-User-Id", guestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(email)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String access = (String) asMap(claimed.getResponse().getContentAsString()).get("accessToken");
+        // Головне в усій фічі: id НЕ змінився, тож усе, створене гостем,
+        // лишилось при ньому — переносити нічого не треба.
+        assertEquals(guestId, subjectOf(access));
+        assertEquals(Boolean.FALSE, claimOf(access, "guest"));
+
+        // І тепер це звичайний акаунт: вхід паролем працює.
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"secret12345"}
+                                """.formatted(email)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void claimGuest_rejectsAlreadyRegisteredAccount() throws Exception {
+        MvcResult reg = mockMvc.perform(post("/api/user/register-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(uniqueEmail())))
+                .andReturn();
+        String userId = subjectOf((String) asMap(reg.getResponse().getContentAsString()).get("accessToken"));
+
+        mockMvc.perform(post("/api/user/claim-guest")
+                        .header("X-User-Id", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(uniqueEmail())))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void claimGuest_rejectsTakenEmail() throws Exception {
+        String taken = uniqueEmail();
+        mockMvc.perform(post("/api/user/register-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(taken)))
+                .andExpect(status().isCreated());
+
+        MvcResult guest = mockMvc.perform(post("/api/auth/guest")).andReturn();
+        String guestId = subjectOf((String) asMap(guest.getResponse().getContentAsString()).get("accessToken"));
+
+        mockMvc.perform(post("/api/user/claim-guest")
+                        .header("X-User-Id", guestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(taken)))
+                .andExpect(status().is4xxClientError());
     }
 }

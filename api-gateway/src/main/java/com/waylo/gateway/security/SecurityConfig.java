@@ -12,8 +12,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  *
  * Bearer-токени → stateless, тому csrf вимкнено.
  * Публічні: логін/реєстрація (/api/auth/**), JWKS, health/info/prometheus,
- * перегляд маршруту за посиланням (/api/public/**) і віддача картинок
- * (GET /api/media/**) — туди ходять гості без акаунта.
+ * перегляд маршруту за посиланням (/api/public/**), віддача картинок
+ * (GET /api/media/**) і читання каталогу місць (GET /api/places/**) —
+ * туди ходять гості без акаунта.
  * Решта /api/** — тільки з валідним JWT.
  */
 @Configuration
@@ -32,6 +33,11 @@ public class SecurityConfig {
                         // Authorization. Захист — невгадуваний UUID у шляху.
                         // Завантаження (POST /api/media/upload) лишається під автентифікацією.
                         .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/media/**").permitAll()
+                        // Каталог місць читається без акаунта: у відповідях немає
+                        // нічого користувацького, а можливість подивитись, що вміє
+                        // застосунок, до реєстрації — половина сенсу вітрини.
+                        // Запис (POST /api/places/resolve-link) лишається під токеном.
+                        .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/places/**").permitAll()
                         .pathMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

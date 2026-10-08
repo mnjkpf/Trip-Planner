@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.waylo.user.dto.AuthResponse;
 import com.waylo.user.dto.ChangePasswordRequest;
+import com.waylo.user.dto.GoogleLoginRequest;
 import com.waylo.user.dto.RegisterRequest;
 import com.waylo.user.dto.UpdateProfileRequest;
 import com.waylo.user.dto.UserLookupResponse;
@@ -42,6 +43,24 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest req) {
         return authService.register(req);
+    }
+
+    /**
+     * Перетворює гостьовий акаунт на справжній. Під токеном гостя: id
+     * користувача не змінюється, тож усі подорожі, створені до реєстрації,
+     * лишаються на місці.
+     */
+    @PostMapping("/claim-guest")
+    public AuthResponse claimGuest(@RequestHeader("X-User-Id") UUID userId,
+                                   @Valid @RequestBody RegisterRequest req) {
+        return authService.claimGuest(userId, req);
+    }
+
+    /** Те саме привласнення, але через Google Sign-In. */
+    @PostMapping("/claim-guest-google")
+    public AuthResponse claimGuestWithGoogle(@RequestHeader("X-User-Id") UUID userId,
+                                             @Valid @RequestBody GoogleLoginRequest req) {
+        return authService.claimGuestWithGoogle(userId, req.idToken());
     }
 
     /**

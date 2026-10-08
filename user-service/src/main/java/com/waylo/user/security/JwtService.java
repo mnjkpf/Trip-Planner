@@ -16,6 +16,9 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
+    /** Значення oauth_provider для тимчасових акаунтів без реєстрації. */
+    public static final String GUEST_PROVIDER = "guest";
+
     private final JwtEncoder jwtEncoder;
     private final String issuer;
     private final String keyId;
@@ -43,6 +46,9 @@ public class JwtService {
                 .claim("uid", user.getId().toString())      // → gateway → X-User-Id
                 .claim("role", user.getRole().name())       // → gateway → X-User-Role
                 .claim("email", user.getEmail())
+                // Фронт за цим прапорцем знає, що акаунт тимчасовий, і пропонує
+                // зберегти подорожі справжньою реєстрацією.
+                .claim("guest", GUEST_PROVIDER.equals(user.getOauthProvider()))
                 .build();
 
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)

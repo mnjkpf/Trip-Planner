@@ -9,7 +9,11 @@
     "places": "Lugares",
     "journal": "Registro",
     "logout": "Cerrar sesión",
-    "language": "Idioma"
+    "language": "Idioma",
+    "plan_trip": "Planear viaje",
+    "guest_unsaved": "Sesión de invitado — tus viajes aún no están vinculados a una cuenta",
+    "save_account": "Guardar con una cuenta",
+    "discard_guest": "Descartar sesión"
   },
   "common": {
     "loading": "Cargando…",
@@ -47,7 +51,10 @@
     "register_error": "Error en el registro",
     "or": "o",
     "google_error": "Inicio con Google falló",
-    "google_load_error": "No se pudo cargar el inicio con Google"
+    "google_load_error": "No se pudo cargar el inicio con Google",
+    "claim_title": "Guarda tus viajes",
+    "claim_subtitle": "Crea una cuenta y todo lo que planeaste como invitado se queda contigo",
+    "claim_btn": "Crear cuenta y conservar viajes"
   },
   "trips": {
     "title": "Mis viajes",

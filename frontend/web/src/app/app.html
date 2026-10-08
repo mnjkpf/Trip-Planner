@@ -1,29 +1,28 @@
-@if (auth.isLoggedIn()) {
+@if (standalone()) {
+  <main class="auth-main"><router-outlet /></main>
+} @else {
   <div class="shell">
     <aside class="sidebar">
       <div class="sb-brand">
-        <a class="brand" routerLink="/trips">WAY<span>/</span>LO</a>
+        <a class="brand" routerLink="/">WAY<span>/</span>LO</a>
         <div class="sb-tag">{{ 'app.subtitle' | translate }}</div>
       </div>
 
       <nav class="sb-nav">
-        <a routerLink="/trips" routerLinkActive="on">{{ 'nav.trips' | translate }}</a>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/trips" routerLinkActive="on">{{ 'nav.trips' | translate }}</a>
+        }
         <a routerLink="/places" routerLinkActive="on">{{ 'nav.places' | translate }}</a>
-        <a routerLink="/wishlist" routerLinkActive="on">
-          {{ 'nav.wishlist' | translate }}<span class="count">{{ wishlist.savedIds().size }}</span>
-        </a>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/wishlist" routerLinkActive="on">
+            {{ 'nav.wishlist' | translate }}<span class="count">{{ wishlist.savedIds().size }}</span>
+          </a>
+        }
       </nav>
 
-      <div class="sb-log">
-        <div class="kicker">{{ 'nav.journal' | translate }}</div>
-        <div class="log-lines">
-          @for (l of log.lines(); track $index) {
-            <div class="log-line"><span class="tick">▸</span><span>{{ l }}</span></div>
-          } @empty {
-            <div class="log-line muted">…</div>
-          }
-        </div>
-      </div>
+      @if (!auth.isLoggedIn()) {
+        <a class="sb-cta" routerLink="/trips/new">{{ 'nav.plan_trip' | translate }}</a>
+      }
 
       <div class="sb-lang">
         <label class="kicker">{{ 'nav.language' | translate }}</label>
@@ -35,16 +34,23 @@
       </div>
 
       <div class="sb-user">
-        <a class="user-row" routerLink="/profile" routerLinkActive="on">
-          <span class="avatar">TP</span>
-          <span class="uname">{{ 'profile.title' | translate }}</span>
-        </a>
-        <button class="sb-logout" (click)="logout()">{{ 'nav.logout' | translate }}</button>
+        @if (auth.isGuest()) {
+          <div class="guest-hint">{{ 'nav.guest_unsaved' | translate }}</div>
+          <a class="sb-signin" routerLink="/register">{{ 'nav.save_account' | translate }}</a>
+          <button class="sb-logout" (click)="logout()">{{ 'nav.discard_guest' | translate }}</button>
+        } @else if (auth.isLoggedIn()) {
+          <a class="user-row" routerLink="/profile" routerLinkActive="on">
+            <span class="avatar">TP</span>
+            <span class="uname">{{ 'profile.title' | translate }}</span>
+          </a>
+          <button class="sb-logout" (click)="logout()">{{ 'nav.logout' | translate }}</button>
+        } @else {
+          <div class="guest-hint">{{ 'nav.guest_hint' | translate }}</div>
+          <a class="sb-signin" routerLink="/login">{{ 'nav.sign_in' | translate }}</a>
+        }
       </div>
     </aside>
 
     <main class="main"><router-outlet /></main>
   </div>
-} @else {
-  <main class="auth-main"><router-outlet /></main>
 }

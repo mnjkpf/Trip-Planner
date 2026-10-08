@@ -9,7 +9,11 @@
     "places": "Places",
     "journal": "Event log",
     "logout": "Log out",
-    "language": "Language"
+    "language": "Language",
+    "plan_trip": "Plan a trip",
+    "guest_unsaved": "Guest session — your trips are not tied to an account yet",
+    "save_account": "Save with an account",
+    "discard_guest": "Discard session"
   },
   "common": {
     "loading": "Loading…",
@@ -47,7 +51,10 @@
     "register_error": "Registration failed",
     "or": "or",
     "google_error": "Google sign-in failed",
-    "google_load_error": "Could not load Google sign-in"
+    "google_load_error": "Could not load Google sign-in",
+    "claim_title": "Save your trips",
+    "claim_subtitle": "Create an account and everything you planned as a guest stays with you",
+    "claim_btn": "Create account and keep trips"
   },
   "trips": {
     "title": "My trips",

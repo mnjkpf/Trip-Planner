@@ -113,6 +113,81 @@ public class AuthService {
         return issueTokens(user);
     }
 
+    /**
+     * Гостьовий вхід: створює тимчасовий акаунт без пошти й пароля, щоб можна
+     * було спланувати подорож одразу, не реєструючись. Технічно це звичайний
+     * користувач — усі сервіси нижче працюють із ним як із будь-яким іншим,
+     * тож жодної окремої «анонімної» гілки в домені не з'являється.
+     *
+     * Пошта синтетична і нікому не належить: .invalid зарезервований
+     * RFC 2606 саме під такі випадки, тож колізія з реальною адресою
+     * неможлива, а унікальний індекс по lower(email) лишається вдоволеним.
+     */
+    @Transactional
+    public AuthResponse loginAsGuest() {
+        User guest = User.builder()
+                .id(UUID.randomUUID())
+                .email("guest-" + UUID.randomUUID() + "@guest.invalid")
+                .passwordHash(null)                      // увійти паролем неможливо
+                .displayName("Guest")
+                .oauthProvider(JwtService.GUEST_PROVIDER)
+                .role(RoleName.USER)
+                .enabled(true)
+                .build();
+        userRepository.save(guest);
+        return issueTokens(guest);
+    }
+
+    /**
+     * Перетворює гостьовий акаунт на справжній: та сама рядок у БД отримує
+     * пошту й пароль. Саме тому подорожі, створені гостем, лишаються при
+     * ньому — id користувача не змінюється, нічого переносити не треба.
+     */
+    @Transactional
+    public AuthResponse claimGuest(UUID userId, RegisterRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidCredentialsException("Користувача не існує"));
+        if (!JwtService.GUEST_PROVIDER.equals(user.getOauthProvider())) {
+            throw new InvalidCredentialsException("Акаунт уже зареєстрований");
+        }
+        if (userRepository.existsByEmailIgnoreCase(req.email())) {
+            throw new EmailAlreadyUsedException("Пошта вже зареєстрована");
+        }
+        user.setEmail(req.email());
+        user.setPasswordHash(passwordEncoder.encode(req.password()));
+        user.setDisplayName(req.displayName());
+        user.setOauthProvider(null);                     // більше не гість
+        userRepository.save(user);
+        // Старі refresh-токени лишаються дійсними — і це правильно: id
+        // користувача не змінився, це та сама людина, просто тепер із паролем.
+        return issueTokens(user);
+    }
+
+    /**
+     * Те саме привласнення, але через Google: гостьовий рядок отримує пошту
+     * з підтвердженого ID-токена. Якщо акаунт із такою поштою вже існує —
+     * це повернення старого користувача, тож логінимо його, а порожнього
+     * гостя лишаємо помирати своєю смертю (чистилка прибере).
+     */
+    @Transactional
+    public AuthResponse claimGuestWithGoogle(UUID userId, String idToken) {
+        User guest = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidCredentialsException("Користувача не існує"));
+        if (!JwtService.GUEST_PROVIDER.equals(guest.getOauthProvider())) {
+            throw new InvalidCredentialsException("Акаунт уже зареєстрований");
+        }
+        GoogleIdentity id = googleVerifier.verify(idToken);
+        var existing = userRepository.findByEmailIgnoreCase(id.email());
+        if (existing.isPresent()) {
+            return issueTokens(existing.get());
+        }
+        guest.setEmail(id.email());
+        guest.setDisplayName(id.name());
+        guest.setOauthProvider("google");
+        userRepository.save(guest);
+        return issueTokens(guest);
+    }
+
     private AuthResponse issueTokens(User user) {
         String access = jwtService.issueAccessToken(user);
         String refresh = refreshTokenService.issue(user);

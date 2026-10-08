@@ -26,12 +26,6 @@
 .sb-nav a.on { color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .sb-nav .count { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400; }
 
-.sb-log { padding: 14px 18px; border-bottom: 2px solid var(--divider); }
-.log-lines { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.log-line { display: flex; gap: 6px; font: 400 11px/1.35 var(--mono); color: rgba(14, 14, 26, 0.7); overflow: hidden; }
-.log-line span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.log-line .tick { color: var(--accent); flex: none; }
-
 .sb-user { margin-top: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .user-row { display: flex; align-items: center; gap: 10px; }
 .avatar {
@@ -44,10 +38,19 @@
   color: var(--accent); cursor: pointer; text-align: left;
 }
 
+/* Гостьовий режим: підказка + кнопка входу замість профілю й виходу. */
+.guest-hint { font: 400 11px/1.4 var(--font); color: var(--muted); }
+.sb-signin {
+  display: block; text-align: center; padding: 9px 12px;
+  background: var(--accent); color: var(--bg);
+  font: 700 12px/1.2 var(--font); text-decoration: none;
+}
+.sb-signin:hover { filter: brightness(1.1); }
+
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
 .auth-main { min-height: 100vh; display: flex; width: 100%; }
 
-/* narrow screens: sidebar becomes a top strip, log hidden */
+/* narrow screens: sidebar becomes a top strip */
 @media (max-width: 760px) {
   .shell { flex-direction: column; }
   .sidebar {
@@ -59,9 +62,26 @@
   .sb-nav { flex-direction: row; border-bottom: 0; margin-right: auto; }
   .sb-nav a { border-bottom: 0; border-right: 1px solid var(--divider-soft); }
   .sb-nav a.on { box-shadow: inset 0 -3px 0 var(--accent); }
-  .sb-log { display: none; }
+  .guest-hint { display: none; }
+  .sb-cta { margin: 0 12px; padding: 7px 12px; }
   .sb-user { margin: 0; padding: 10px 16px; flex-direction: row; align-items: center; gap: 14px; }
 }
+
+/* Головний заклик для гостя: «спланувати» — основна дія вітрини. */
+.sb-cta {
+  display: block; margin: 14px 18px; padding: 10px 12px; text-align: center;
+  background: var(--accent); color: var(--bg);
+  font: 700 12px/1.2 var(--font); text-decoration: none;
+}
+.sb-cta:hover { filter: brightness(1.1); }
+
+/* Головний заклик для гостя: «спланувати» — основна дія вітрини. */
+.sb-cta {
+  display: block; margin: 14px 18px; padding: 10px 12px; text-align: center;
+  background: var(--accent); color: var(--bg);
+  font: 700 12px/1.2 var(--font); text-decoration: none;
+}
+.sb-cta:hover { filter: brightness(1.1); }
 
 .sb-lang { padding: 0 20px 10px; display: flex; flex-direction: column; gap: 4px; }
 .lang-select {

@@ -17,8 +17,8 @@ import { LangService } from '../core/lang.service';
         <div class="poster-mono">6 microservices · API gateway · SSE</div>
       </div>
       <div class="auth-form">
-        <h1>{{ 'auth.register_title' | translate }}</h1>
-        <p class="sub">{{ 'auth.register_subtitle' | translate }}</p>
+        <h1>{{ (auth.isGuest() ? 'auth.claim_title' : 'auth.register_title') | translate }}</h1>
+        <p class="sub">{{ (auth.isGuest() ? 'auth.claim_subtitle' : 'auth.register_subtitle') | translate }}</p>
         <form (ngSubmit)="submit()" #f="ngForm">
           <div class="field">
             <label>{{ 'auth.name' | translate }}</label>
@@ -34,7 +34,9 @@ import { LangService } from '../core/lang.service';
           </div>
           @if (error()) { <p class="error">{{ error()! | translate }}</p> }
           <button class="btn btn-primary btn-block" type="submit" [disabled]="loading() || f.invalid">
-            {{ loading() ? ('common.sending' | translate) : ('auth.register_btn' | translate) }}
+            {{ loading()
+              ? ('common.sending' | translate)
+              : ((auth.isGuest() ? 'auth.claim_btn' : 'auth.register_btn') | translate) }}
           </button>
         </form>
         @if (google.enabled()) {
@@ -46,6 +48,7 @@ import { LangService } from '../core/lang.service';
         <p class="foot">{{ 'auth.have_account' | translate }}
           <a routerLink="/login">{{ 'auth.login_link' | translate }}</a>
         </p>
+        <p class="foot"><a routerLink="/places">{{ 'auth.browse_as_guest' | translate }}</a></p>
       </div>
     </div>
   `,
@@ -56,7 +59,7 @@ import { LangService } from '../core/lang.service';
   `],
 })
 export class Register implements AfterViewInit {
-  private auth = inject(AuthService);
+  protected auth = inject(AuthService);
   private router = inject(Router);
   protected google = inject(GoogleAuthService);
   private lang = inject(LangService);
@@ -75,7 +78,12 @@ export class Register implements AfterViewInit {
 
   private onGoogle(idToken: string): void {
     this.googleErr.set(null);
-    this.auth.loginWithGoogle(idToken).subscribe({
+    // Для гостя — привласнення, інакше його подорожі лишилися б на старому
+    // акаунті, а він опинився б у новому й порожньому.
+    const done = this.auth.isGuest()
+      ? this.auth.claimGuestWithGoogle(idToken)
+      : this.auth.loginWithGoogle(idToken);
+    done.subscribe({
       next: () => this.router.navigate(['/trips']),
       error: () => this.googleErr.set('auth.google_error'),
     });
@@ -89,7 +97,12 @@ export class Register implements AfterViewInit {
   submit() {
     this.loading.set(true);
     this.error.set(null);
-    this.auth.register(this.email, this.password, this.displayName).subscribe({
+    // Гість не реєструється наново: його ж рядок у БД отримує пошту й пароль,
+    // тож id не змінюється і спланованe до реєстрації лишається на місці.
+    const done = this.auth.isGuest()
+      ? this.auth.claimGuest(this.email, this.password, this.displayName)
+      : this.auth.register(this.email, this.password, this.displayName);
+    done.subscribe({
       next: () => this.router.navigate(['/trips']),
       error: () => {
         this.error.set('auth.register_error');

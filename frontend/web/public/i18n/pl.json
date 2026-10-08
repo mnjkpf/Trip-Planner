@@ -9,7 +9,11 @@
     "places": "Miejsca",
     "journal": "Dziennik zdarzeń",
     "logout": "Wyloguj się",
-    "language": "Język"
+    "language": "Język",
+    "plan_trip": "Zaplanuj podróż",
+    "guest_unsaved": "Sesja gościa — podróże nie są jeszcze powiązane z kontem",
+    "save_account": "Zapisz na koncie",
+    "discard_guest": "Odrzuć sesję"
   },
   "common": {
     "loading": "Ładowanie…",
@@ -47,7 +51,10 @@
     "register_error": "Rejestracja nie powiodła się",
     "or": "lub",
     "google_error": "Logowanie przez Google nie powiodło się",
-    "google_load_error": "Nie udało się załadować logowania Google"
+    "google_load_error": "Nie udało się załadować logowania Google",
+    "claim_title": "Zapisz swoje podróże",
+    "claim_subtitle": "Załóż konto, a wszystko zaplanowane jako gość zostanie z Tobą",
+    "claim_btn": "Załóż konto i zachowaj podróże"
   },
   "trips": {
     "title": "Moje podróże",

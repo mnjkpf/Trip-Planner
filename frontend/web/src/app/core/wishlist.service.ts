@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { AuthService } from './auth.service';
 import { WishlistItem, WishlistItemRequest } from './models';
 
 /**
@@ -9,10 +10,15 @@ import { WishlistItem, WishlistItemRequest } from './models';
  * зберіг місце в деталях → сердечко на картці пошуку одразу заповнене.
  * Додавання/видалення оновлюють кеш через tap, тож перезавантаження не треба.
  * Ходить через gateway: /api/wishlist -> trip-service.
+ *
+ * Для гостя вішліст порожній і load() не ходить у мережу: каталог місць
+ * відкритий без акаунта, а запит до /api/wishlist дав би 401, який
+ * інтерсептор трактує як протермінований токен і викинув би на логін.
  */
 @Injectable({ providedIn: 'root' })
 export class WishlistService {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
 
   private _items = signal<WishlistItem[]>([]);
   readonly items = this._items.asReadonly();
@@ -22,6 +28,11 @@ export class WishlistService {
 
   /** Лінива загрузка: тягнемо один раз, поки не попросять force. */
   load(force = false): void {
+    if (!this.auth.isLoggedIn()) {
+      this._items.set([]);
+      this.loaded = false;
+      return;
+    }
     if (this.loaded && !force) {
       return;
     }

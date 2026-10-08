@@ -9,7 +9,11 @@
     "places": "Luoghi",
     "journal": "Registro",
     "logout": "Esci",
-    "language": "Lingua"
+    "language": "Lingua",
+    "plan_trip": "Pianifica",
+    "guest_unsaved": "Sessione ospite — i tuoi viaggi non sono ancora legati a un account",
+    "save_account": "Salva con un account",
+    "discard_guest": "Abbandona sessione"
   },
   "common": {
     "loading": "Caricamento…",
@@ -47,7 +51,10 @@
     "register_error": "Registrazione fallita",
     "or": "o",
     "google_error": "Accesso con Google fallito",
-    "google_load_error": "Impossibile caricare accesso Google"
+    "google_load_error": "Impossibile caricare accesso Google",
+    "claim_title": "Salva i tuoi viaggi",
+    "claim_subtitle": "Crea un account e tutto ciò che hai pianificato da ospite resta con te",
+    "claim_btn": "Crea account e mantieni i viaggi"
   },
   "trips": {
     "title": "I miei viaggi",

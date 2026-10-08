@@ -9,7 +9,11 @@
     "places": "Orte",
     "journal": "Ereignisprotokoll",
     "logout": "Abmelden",
-    "language": "Sprache"
+    "language": "Sprache",
+    "plan_trip": "Reise planen",
+    "guest_unsaved": "Gastsitzung — deine Reisen sind noch keinem Konto zugeordnet",
+    "save_account": "Mit Konto sichern",
+    "discard_guest": "Sitzung verwerfen"
   },
   "common": {
     "loading": "Lädt…",
@@ -47,7 +51,10 @@
     "register_error": "Registrierung fehlgeschlagen",
     "or": "oder",
     "google_error": "Google-Anmeldung fehlgeschlagen",
-    "google_load_error": "Google-Anmeldung konnte nicht geladen werden"
+    "google_load_error": "Google-Anmeldung konnte nicht geladen werden",
+    "claim_title": "Reisen sichern",
+    "claim_subtitle": "Erstelle ein Konto — alles, was du als Gast geplant hast, bleibt erhalten",
+    "claim_btn": "Konto erstellen und Reisen behalten"
   },
   "trips": {
     "title": "Meine Reisen",
