@@ -415,3 +415,45 @@ export interface WeatherAlert {
   swapPrecipitationMm: number | null;
   generatedAt: string;
 }
+
+/* ── Прев'ю маршруту для гостя ───────────────────────────────────────────── */
+
+/** Точка дня у прев'ю. Приходить від planner-service напряму, тож поля
+ *  називаються інакше, ніж у збереженому маршруті: там їх перейменовує
+ *  trip-service, коли записує в базу. */
+export interface PreviewItem {
+  placeId: string;
+  name: string;
+  category: string | null;
+  lat: number;
+  lon: number;
+  order: number;
+  travelMinutesFromPrev: number;
+  dwellMinutes: number;
+  plannedStart: string | null;
+  plannedEnd: string | null;
+  imageUrl: string | null;
+}
+
+export interface PreviewDay {
+  dayNumber: number;
+  date: string;
+  items: PreviewItem[];
+}
+
+/** Відповідь POST /api/public/plan — нічого не збережено, тільки розрахунок. */
+export interface PlanPreview {
+  days: PreviewDay[];
+  season: string | null;
+  climateHint: string | null;
+}
+
+/**
+ * Чернетка подорожі гостя: форма + порахований маршрут. Живе в localStorage
+ * до моменту, коли людина створить акаунт і натисне «Зберегти».
+ */
+export interface TripDraft {
+  request: CreateTripRequest;
+  preview: PlanPreview;
+  createdAt: string;
+}

@@ -10,11 +10,10 @@
     "logout": "Wyloguj się",
     "language": "Język",
     "plan_trip": "Zaplanuj podróż",
-    "guest_unsaved": "Sesja gościa — podróże nie są jeszcze powiązane z kontem",
-    "save_account": "Zapisz na koncie",
-    "discard_guest": "Odrzuć sesję",
     "sign_in": "Zaloguj się",
-    "guest_hint": "Zaloguj się, aby planować podróże i zapisywać miejsca"
+    "guest_hint": "Zaloguj się, aby planować podróże i zapisywać miejsca",
+    "my_draft": "Mój szkic trasy",
+    "draft_unsaved": "Szkic trasy — jeszcze niezapisany"
   },
   "common": {
     "loading": "Ładowanie…",
@@ -101,7 +100,9 @@
     "hint": "Po utworzeniu trasa budowana jest automatycznie — od razu zobaczysz ją na mapie.",
     "create_error": "Nie udało się utworzyć podróży",
     "map_load_error": "Nie można załadować mapy Google",
-    "trip_to": "Podróż do "
+    "trip_to": "Podróż do ",
+    "hint_guest": "Konto niepotrzebne — trasę zobaczysz od razu. Do zapisania potrzebne jest konto.",
+    "preview_error": "Nie udało się zbudować trasy. Spróbuj ponownie."
   },
   "detail": {
     "map_loading": "Ładowanie mapy…",
@@ -429,5 +430,22 @@
     "unavailable": "Magazyn zdjęć jest niedostępny — spróbuj później",
     "delete_error": "Nie udało się usunąć zdjęcia",
     "delete_forbidden": "Zdjęcie może usunąć osoba, która je dodała, albo właściciel podróży"
+  },
+  "preview": {
+    "create_account": "Załóż konto, aby zapisać",
+    "day": "Dzień",
+    "discard": "Odrzuć szkic",
+    "empty_day": "Nic nie zaplanowano na ten dzień",
+    "kicker": "Szkic trasy",
+    "min": " min",
+    "none_body": "Zaplanuj podróż, a pojawi się tutaj.",
+    "none_title": "Brak szkicu",
+    "not_saved": "Nigdzie niezapisany — istnieje tylko w tej przeglądarce",
+    "ready_to_save": "Zapisz tę trasę na swoim koncie",
+    "replan": "Zaplanuj inną",
+    "save": "Zapisz podróż",
+    "save_error": "Nie udało się zapisać. Spróbuj ponownie.",
+    "saving": "Zapisywanie…",
+    "walk": " min pieszo"
   }
 }

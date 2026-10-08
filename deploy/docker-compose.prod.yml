@@ -312,11 +312,14 @@ services:
         condition: service_healthy
       media-service:
         condition: service_healthy
+      planner-service:
+        condition: service_healthy
     environment:
       SVC_USER_URI: http://user-service:8081
       SVC_PLACE_URI: http://place-service:8082
       SVC_TRIP_URI: http://trip-service:8083
       SVC_CONTEXT_URI: http://context-service:8084
+      SVC_PLANNER_URI: http://planner-service:8086
       SVC_OFFER_URI: http://offer-service:8087
       SVC_MEDIA_URI: http://media-service:8088
       JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json

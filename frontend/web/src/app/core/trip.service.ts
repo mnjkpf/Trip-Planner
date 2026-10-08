@@ -3,19 +3,20 @@ import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Budget,
-  InviteMemberRequest,
   BudgetRequest,
   CreateTripRequest,
   ExpenseRequest,
+  InviteMemberRequest,
   Itinerary,
+  PhotoUploadTicket,
   PlanJob,
+  PlanPreview,
   ShareLink,
   SharedTrip,
-  PhotoUploadTicket,
-  TripMember,
-  TripPhoto,
   TravelContext,
   Trip,
+  TripMember,
+  TripPhoto,
   UpdateTripRequest,
   WeatherAlert,
 } from './models';
@@ -31,6 +32,24 @@ export class TripService {
 
   get(id: string): Observable<Trip> {
     return this.http.get<Trip>(`/api/trips/${id}`);
+  }
+
+  /**
+   * Прев'ю маршруту без акаунта й без збереження: planner-service рахує
+   * синхронно й віддає дні просто у відповіді. Окремий метод, а не прапорець
+   * у create(), бо це інший контракт — тут немає ні подорожі, ні job'а.
+   */
+  preview(req: CreateTripRequest): Observable<PlanPreview> {
+    return this.http.post<PlanPreview>('/api/public/plan', {
+      destinationLat: req.destinationLat,
+      destinationLon: req.destinationLon,
+      startDate: req.startDate,
+      endDate: req.endDate,
+      pace: req.preferences?.pace ?? null,
+      interests: req.preferences?.interests ?? [],
+      searchRadiusM: req.preferences?.searchRadiusM ?? null,
+      dayStartTime: req.preferences?.dayStartTime ?? null,
+    });
   }
 
   create(req: CreateTripRequest): Observable<Trip> {

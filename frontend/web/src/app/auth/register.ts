@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth.service';
+import { DraftService } from '../core/draft.service';
 import { GoogleAuthService } from '../core/google-auth.service';
 import { LangService } from '../core/lang.service';
 
@@ -17,8 +18,8 @@ import { LangService } from '../core/lang.service';
         <div class="poster-mono">6 microservices · API gateway · SSE</div>
       </div>
       <div class="auth-form">
-        <h1>{{ (auth.isGuest() ? 'auth.claim_title' : 'auth.register_title') | translate }}</h1>
-        <p class="sub">{{ (auth.isGuest() ? 'auth.claim_subtitle' : 'auth.register_subtitle') | translate }}</p>
+        <h1>{{ (drafts.hasDraft() ? 'auth.claim_title' : 'auth.register_title') | translate }}</h1>
+        <p class="sub">{{ (drafts.hasDraft() ? 'auth.claim_subtitle' : 'auth.register_subtitle') | translate }}</p>
         <form (ngSubmit)="submit()" #f="ngForm">
           <div class="field">
             <label>{{ 'auth.name' | translate }}</label>
@@ -36,7 +37,7 @@ import { LangService } from '../core/lang.service';
           <button class="btn btn-primary btn-block" type="submit" [disabled]="loading() || f.invalid">
             {{ loading()
               ? ('common.sending' | translate)
-              : ((auth.isGuest() ? 'auth.claim_btn' : 'auth.register_btn') | translate) }}
+              : ((drafts.hasDraft() ? 'auth.claim_btn' : 'auth.register_btn') | translate) }}
           </button>
         </form>
         @if (google.enabled()) {
@@ -61,6 +62,7 @@ import { LangService } from '../core/lang.service';
 export class Register implements AfterViewInit {
   protected auth = inject(AuthService);
   private router = inject(Router);
+  protected drafts = inject(DraftService);
   protected google = inject(GoogleAuthService);
   private lang = inject(LangService);
   private googleBtn = viewChild<ElementRef<HTMLDivElement>>('googleBtn');
@@ -78,13 +80,8 @@ export class Register implements AfterViewInit {
 
   private onGoogle(idToken: string): void {
     this.googleErr.set(null);
-    // Для гостя — привласнення, інакше його подорожі лишилися б на старому
-    // акаунті, а він опинився б у новому й порожньому.
-    const done = this.auth.isGuest()
-      ? this.auth.claimGuestWithGoogle(idToken)
-      : this.auth.loginWithGoogle(idToken);
-    done.subscribe({
-      next: () => this.router.navigate(['/trips']),
+    this.auth.loginWithGoogle(idToken).subscribe({
+      next: () => this.afterAuth(),
       error: () => this.googleErr.set('auth.google_error'),
     });
   }
@@ -97,17 +94,20 @@ export class Register implements AfterViewInit {
   submit() {
     this.loading.set(true);
     this.error.set(null);
-    // Гість не реєструється наново: його ж рядок у БД отримує пошту й пароль,
-    // тож id не змінюється і спланованe до реєстрації лишається на місці.
-    const done = this.auth.isGuest()
-      ? this.auth.claimGuest(this.email, this.password, this.displayName)
-      : this.auth.register(this.email, this.password, this.displayName);
-    done.subscribe({
-      next: () => this.router.navigate(['/trips']),
+    this.auth.register(this.email, this.password, this.displayName).subscribe({
+      next: () => this.afterAuth(),
       error: () => {
         this.error.set('auth.register_error');
         this.loading.set(false);
       },
     });
+  }
+
+  /**
+   * Куди вести після входу. Якщо людина прийшла сюди саме щоб зберегти
+   * спланований маршрут — повертаємо її до нього, а не в порожній список.
+   */
+  private afterAuth(): void {
+    this.router.navigate([this.drafts.hasDraft() ? '/preview' : '/trips']);
   }
 }

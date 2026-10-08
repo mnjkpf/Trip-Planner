@@ -18,7 +18,13 @@ import java.util.Set;
 
 /**
  * Ядро планувальника: дістати POI (place-service), збагатити контекстом
- * (context-service) і опублікувати маршрут подією trip.plan.completed.
+ * (context-service) і віддати маршрут.
+ *
+ * Побудова (build) відокремлена від публікації (plan) навмисно: той самий
+ * розрахунок потрібен двом викликачам — асинхронному консюмеру Kafka, який
+ * планує збережену подорож, і синхронному прев'ю для гостя, де нема ні
+ * подорожі в базі, ні job'а, ні користувача. Спільне ядро гарантує, що
+ * гість бачить саме той маршрут, який отримає після реєстрації.
  *
  * Побажання користувача (темп, інтереси, радіус, початок дня) — опційні:
  * кожне має свій дефолт, тож подорож без жодного вибраного фільтра планується
@@ -48,7 +54,11 @@ public class PlanningService {
         this.publisher = publisher;
     }
 
-    public void plan(PlanRequest req) {
+    /**
+     * Сам розрахунок: нічого не публікує й нічого не пише. Викликається і з
+     * Kafka-консюмера, і з публічного прев'ю.
+     */
+    public PlanOutcome build(PlanRequest req) {
         int radius = radiusOf(req.searchRadiusM());
 
         List<PlaceDto> found = placeClient.searchNearby(
@@ -62,18 +72,25 @@ public class PlanningService {
         DestinationContext context = contextClient.fetch(
                 req.destinationLat(), req.destinationLon(), req.startDate(), req.endDate());
 
-        publisher.publishCompleted(new PlanCompletedEvent(
-                req.jobId(), req.tripId(), req.userId(), "COMPLETED",
-                context.season(), context.climateHint(), days));
-
         int scheduled = days.stream().mapToInt(d -> d.items().size()).sum();
-        log.info("маршрут для job {} побудовано: {} днів, {} з {} точок, радіус={}м, "
+        log.info("маршрут побудовано (job={}): {} днів, {} з {} точок, радіус={}м, "
                         + "темп={}, інтереси={}, старт дня={}, сезон={}",
-                req.jobId(), days.size(), scheduled, places.size(), radius,
+                req.jobId() == null ? "прев'ю" : req.jobId(),
+                days.size(), scheduled, places.size(), radius,
                 req.pace() == null ? "—" : req.pace(),
                 req.interests().isEmpty() ? "—" : req.interests(),
                 req.dayStartTime() == null ? "—" : req.dayStartTime(),
                 context.season());
+
+        return new PlanOutcome(days, context.season(), context.climateHint());
+    }
+
+    /** Асинхронна гілка: побудувати й віддати результат у Kafka. */
+    public void plan(PlanRequest req) {
+        PlanOutcome outcome = build(req);
+        publisher.publishCompleted(new PlanCompletedEvent(
+                req.jobId(), req.tripId(), req.userId(), "COMPLETED",
+                outcome.season(), outcome.climateHint(), outcome.days()));
     }
 
     /** Радіус пошуку POI: вибір користувача в розумних межах, інакше дефолт. */

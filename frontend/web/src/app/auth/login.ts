@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth.service';
+import { DraftService } from '../core/draft.service';
 import { GoogleAuthService } from '../core/google-auth.service';
 import { LangService } from '../core/lang.service';
 
@@ -55,6 +56,7 @@ import { LangService } from '../core/lang.service';
 export class Login implements AfterViewInit {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private drafts = inject(DraftService);
   protected google = inject(GoogleAuthService);
   private lang = inject(LangService);
   private googleBtn = viewChild<ElementRef<HTMLDivElement>>('googleBtn');
@@ -73,7 +75,7 @@ export class Login implements AfterViewInit {
   private onGoogle(idToken: string): void {
     this.googleErr.set(null);
     this.auth.loginWithGoogle(idToken).subscribe({
-      next: () => this.router.navigate(['/trips']),
+      next: () => this.afterAuth(),
       error: () => this.googleErr.set('auth.google_error'),
     });
   }
@@ -86,12 +88,20 @@ export class Login implements AfterViewInit {
     this.loading.set(true);
     this.error.set(null);
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/trips']),
+      next: () => this.afterAuth(),
       error: () => {
         // Ключ i18n — щоб повідомлення теж було багатомовним
         this.error.set('auth.login_error');
         this.loading.set(false);
       },
     });
+  }
+
+  /**
+   * Куди вести після входу. Якщо людина прийшла сюди саме щоб зберегти
+   * спланований маршрут — повертаємо її до нього, а не в порожній список.
+   */
+  private afterAuth(): void {
+    this.router.navigate([this.drafts.hasDraft() ? '/preview' : '/trips']);
   }
 }

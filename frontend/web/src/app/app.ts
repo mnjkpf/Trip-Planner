@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { TranslatePipe } from '@ngx-translate/core';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
+import { DraftService } from './core/draft.service';
 import { LangService } from './core/lang.service';
 import { UserService } from './core/user.service';
 import { WishlistService } from './core/wishlist.service';
@@ -20,6 +21,7 @@ const STANDALONE_PREFIXES = ['/login', '/register'];
 export class App {
   protected auth = inject(AuthService);
   protected wishlist = inject(WishlistService);
+  protected drafts = inject(DraftService);
   protected lang = inject(LangService);
   private users = inject(UserService);
   private router = inject(Router);

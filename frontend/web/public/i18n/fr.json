@@ -10,11 +10,10 @@
     "logout": "Déconnexion",
     "language": "Langue",
     "plan_trip": "Planifier",
-    "guest_unsaved": "Session invité — tes voyages ne sont pas encore liés à un compte",
-    "save_account": "Enregistrer avec un compte",
-    "discard_guest": "Abandonner la session",
     "sign_in": "Se connecter",
-    "guest_hint": "Connecte-toi pour planifier des voyages et enregistrer des lieux"
+    "guest_hint": "Connecte-toi pour planifier des voyages et enregistrer des lieux",
+    "my_draft": "Mon brouillon",
+    "draft_unsaved": "Brouillon d'itinéraire — pas encore enregistré"
   },
   "common": {
     "loading": "Chargement…",
@@ -101,7 +100,9 @@
     "hint": "Après création, l'itinéraire est construit automatiquement.",
     "create_error": "Impossible de créer le voyage",
     "map_load_error": "Impossible de charger la carte Google",
-    "trip_to": "Voyage à "
+    "trip_to": "Voyage à ",
+    "hint_guest": "Pas besoin de compte — tu verras l'itinéraire tout de suite. L'enregistrer demande un compte.",
+    "preview_error": "Impossible de construire l'itinéraire. Réessaie."
   },
   "detail": {
     "map_loading": "Chargement de la carte…",
@@ -429,5 +430,22 @@
     "unavailable": "Le stockage des photos est indisponible — réessaie plus tard",
     "delete_error": "Impossible de supprimer la photo",
     "delete_forbidden": "Seule la personne qui a ajouté la photo, ou le propriétaire du voyage, peut la supprimer"
+  },
+  "preview": {
+    "create_account": "Créer un compte pour enregistrer",
+    "day": "Jour",
+    "discard": "Supprimer le brouillon",
+    "empty_day": "Rien de prévu ce jour-là",
+    "kicker": "Brouillon",
+    "min": " min",
+    "none_body": "Planifie un voyage, il apparaîtra ici.",
+    "none_title": "Aucun brouillon",
+    "not_saved": "Enregistré nulle part — n'existe que dans ce navigateur",
+    "ready_to_save": "Enregistrer cet itinéraire dans ton compte",
+    "replan": "Planifier un autre",
+    "save": "Enregistrer le voyage",
+    "save_error": "Échec de l’enregistrement. Réessaie.",
+    "saving": "Enregistrement…",
+    "walk": " min à pied"
   }
 }

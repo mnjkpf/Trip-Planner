@@ -10,11 +10,10 @@
     "logout": "Log out",
     "language": "Language",
     "plan_trip": "Plan a trip",
-    "guest_unsaved": "Guest session — your trips are not tied to an account yet",
-    "save_account": "Save with an account",
-    "discard_guest": "Discard session",
     "sign_in": "Sign in",
-    "guest_hint": "Sign in to plan trips and save places"
+    "guest_hint": "Sign in to plan trips and save places",
+    "my_draft": "My draft route",
+    "draft_unsaved": "Draft route — not saved yet"
   },
   "common": {
     "loading": "Loading…",
@@ -101,7 +100,9 @@
     "hint": "After creation the route is built automatically — you'll see it on the map.",
     "create_error": "Failed to create trip",
     "map_load_error": "Could not load Google map",
-    "trip_to": "Trip to "
+    "trip_to": "Trip to ",
+    "hint_guest": "No account needed — you will see the route right away. Saving it requires an account.",
+    "preview_error": "Could not build the route. Try again."
   },
   "detail": {
     "map_loading": "Loading map…",
@@ -429,5 +430,22 @@
     "unavailable": "Photo storage is unavailable — try later",
     "delete_error": "Could not delete the photo",
     "delete_forbidden": "Only the person who added the photo, or the trip owner, can delete it"
+  },
+  "preview": {
+    "create_account": "Create an account to save",
+    "day": "Day",
+    "discard": "Discard draft",
+    "empty_day": "Nothing scheduled for this day",
+    "kicker": "Draft route",
+    "min": " min",
+    "none_body": "Plan a trip and it will show up here.",
+    "none_title": "No draft route",
+    "not_saved": "Not saved anywhere — it lives only in this browser",
+    "ready_to_save": "Save this route to your account",
+    "replan": "Plan another",
+    "save": "Save trip",
+    "save_error": "Could not save. Try again.",
+    "saving": "Saving…",
+    "walk": " min walk"
   }
 }

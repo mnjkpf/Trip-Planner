@@ -10,11 +10,10 @@
     "logout": "Esci",
     "language": "Lingua",
     "plan_trip": "Pianifica",
-    "guest_unsaved": "Sessione ospite — i tuoi viaggi non sono ancora legati a un account",
-    "save_account": "Salva con un account",
-    "discard_guest": "Abbandona sessione",
     "sign_in": "Accedi",
-    "guest_hint": "Accedi per pianificare viaggi e salvare luoghi"
+    "guest_hint": "Accedi per pianificare viaggi e salvare luoghi",
+    "my_draft": "La mia bozza",
+    "draft_unsaved": "Bozza di itinerario — non ancora salvata"
   },
   "common": {
     "loading": "Caricamento…",
@@ -101,7 +100,9 @@
     "hint": "Dopo la creazione il percorso si costruisce automaticamente.",
     "create_error": "Impossibile creare il viaggio",
     "map_load_error": "Impossibile caricare la mappa Google",
-    "trip_to": "Viaggio a "
+    "trip_to": "Viaggio a ",
+    "hint_guest": "Nessun account necessario — vedrai subito l'itinerario. Per salvarlo serve un account.",
+    "preview_error": "Impossibile costruire l'itinerario. Riprova."
   },
   "detail": {
     "map_loading": "Carico la mappa…",
@@ -429,5 +430,22 @@
     "unavailable": "L'archivio foto non è disponibile: riprova più tardi",
     "delete_error": "Impossibile eliminare la foto",
     "delete_forbidden": "Può eliminarla solo chi ha aggiunto la foto o il proprietario del viaggio"
+  },
+  "preview": {
+    "create_account": "Crea un account per salvare",
+    "day": "Giorno",
+    "discard": "Elimina bozza",
+    "empty_day": "Niente in programma per questo giorno",
+    "kicker": "Bozza itinerario",
+    "min": " min",
+    "none_body": "Pianifica un viaggio e comparirà qui.",
+    "none_title": "Nessuna bozza",
+    "not_saved": "Non salvata da nessuna parte — esiste solo in questo browser",
+    "ready_to_save": "Salva questo itinerario nel tuo account",
+    "replan": "Pianificane un altro",
+    "save": "Salva viaggio",
+    "save_error": "Salvataggio non riuscito. Riprova.",
+    "saving": "Salvataggio…",
+    "walk": " min a piedi"
   }
 }

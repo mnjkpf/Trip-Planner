@@ -22,20 +22,6 @@ spring:
           # Бакет у Redis адресується ключем, тому в медіа-роуті свій резолвер
           # (префікс "media:") — інакше різні ставки билися б за один лічильник.
           routes:
-            # Окремо й раніше за user-service: гостьовий вхід створює
-            # користувача в БД, тож ліміт жорсткіший — одна сесія на людину
-            # потрібна раз, а не п'ять разів на секунду.
-            - id: user-service-guest
-              uri: ${SVC_USER_URI:http://localhost:8081}
-              predicates:
-                - Path=/api/auth/guest
-              filters:
-                - name: RequestRateLimiter
-                  args:
-                    redis-rate-limiter.replenishRate: 1
-                    redis-rate-limiter.burstCapacity: 3
-                    redis-rate-limiter.requestedTokens: 1
-                    key-resolver: "#{@guestKeyResolver}"
             - id: user-service
               uri: ${SVC_USER_URI:http://localhost:8081}
               predicates:
@@ -62,6 +48,21 @@ spring:
             # окремий роут: у метриках gateway видно його трафік окремо від
             # приватного. Ліміт звичайний: гість за посиланням робить кілька
             # запитів, а перебір токена не загроза — у ньому 256 біт ентропії.
+            # Прев'ю маршруту для гостя: синхронне, нічого не зберігає.
+            # Ліміт жорсткіший за решту публічного — кожен виклик тягне
+            # place-service і context-service, тобто коштує реальної роботи,
+            # а людині він потрібен раз на кілька хвилин, не раз на секунду.
+            - id: planner-service-preview
+              uri: ${SVC_PLANNER_URI:http://localhost:8086}
+              predicates:
+                - Path=/api/public/plan
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@previewKeyResolver}"
             - id: trip-service-public
               uri: ${SVC_TRIP_URI:http://localhost:8083}
               predicates:

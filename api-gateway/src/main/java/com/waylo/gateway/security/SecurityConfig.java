@@ -29,6 +29,9 @@ public class SecurityConfig {
                         .pathMatchers("/api/auth/**", "/api/user/register-user", "/.well-known/jwks.json").permitAll()
                         .pathMatchers("/api/flights/**", "/api/hotels/**").permitAll()
                         .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/public/**").permitAll()
+                        // Прев'ю маршруту — єдиний публічний POST: нічого не
+                        // змінює на сервері, лише рахує й віддає відповідь.
+                        .pathMatchers(org.springframework.http.HttpMethod.POST, "/api/public/plan").permitAll()
                         // Картинки віддаємо без токена: <img src> не вміє слати
                         // Authorization. Захист — невгадуваний UUID у шляху.
                         // Завантаження (POST /api/media/upload) лишається під автентифікацією.

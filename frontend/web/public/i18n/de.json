@@ -10,11 +10,10 @@
     "logout": "Abmelden",
     "language": "Sprache",
     "plan_trip": "Reise planen",
-    "guest_unsaved": "Gastsitzung — deine Reisen sind noch keinem Konto zugeordnet",
-    "save_account": "Mit Konto sichern",
-    "discard_guest": "Sitzung verwerfen",
     "sign_in": "Anmelden",
-    "guest_hint": "Melde dich an, um Reisen zu planen und Orte zu speichern"
+    "guest_hint": "Melde dich an, um Reisen zu planen und Orte zu speichern",
+    "my_draft": "Mein Entwurf",
+    "draft_unsaved": "Routenentwurf — noch nicht gespeichert"
   },
   "common": {
     "loading": "Lädt…",
@@ -101,7 +100,9 @@
     "hint": "Nach der Erstellung wird die Route automatisch gebaut — du siehst sie sofort auf der Karte.",
     "create_error": "Reise konnte nicht erstellt werden",
     "map_load_error": "Google-Karte konnte nicht geladen werden",
-    "trip_to": "Reise nach "
+    "trip_to": "Reise nach ",
+    "hint_guest": "Kein Konto nötig — die Route siehst du sofort. Zum Speichern brauchst du ein Konto.",
+    "preview_error": "Route konnte nicht erstellt werden. Versuch es erneut."
   },
   "detail": {
     "map_loading": "Karte lädt…",
@@ -429,5 +430,22 @@
     "unavailable": "Der Fotospeicher ist nicht erreichbar — versuch es später",
     "delete_error": "Foto konnte nicht gelöscht werden",
     "delete_forbidden": "Löschen kann nur, wer das Foto hinzugefügt hat, oder der Besitzer der Reise"
+  },
+  "preview": {
+    "create_account": "Konto erstellen und speichern",
+    "day": "Tag",
+    "discard": "Entwurf verwerfen",
+    "empty_day": "Für diesen Tag ist nichts geplant",
+    "kicker": "Routenentwurf",
+    "min": " Min",
+    "none_body": "Plane eine Reise — sie erscheint hier.",
+    "none_title": "Kein Entwurf",
+    "not_saved": "Nirgends gespeichert — existiert nur in diesem Browser",
+    "ready_to_save": "Diese Route im Konto speichern",
+    "replan": "Andere planen",
+    "save": "Reise speichern",
+    "save_error": "Speichern fehlgeschlagen. Versuch es erneut.",
+    "saving": "Speichern…",
+    "walk": " Min zu Fuß"
   }
 }

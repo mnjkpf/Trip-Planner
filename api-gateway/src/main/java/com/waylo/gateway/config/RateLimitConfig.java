@@ -26,13 +26,14 @@ public class RateLimitConfig {
     }
 
     /**
-     * Свій бакет для гостьового входу: кожен виклик створює рядок у users,
-     * тож ліміт має бути суворішим за логін — і не ділити з ним лічильник.
+     * Прев'ю маршруту для гостя: ключ майже завжди за IP (токена нема),
+     * і бакет свій — щоб повільний ліміт планування не з'їдав бакет решти
+     * публічних запитів, якими гість гортає каталог.
      */
     @Bean
-    public KeyResolver guestKeyResolver() {
+    public KeyResolver previewKeyResolver() {
         KeyResolver base = userKeyResolver();
-        return exchange -> base.resolve(exchange).map(key -> "guest:" + key);
+        return exchange -> base.resolve(exchange).map(key -> "preview:" + key);
     }
 
     /**

@@ -7,6 +7,8 @@ import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap 
 import { createMap, dotMarker, loadMaps } from '../core/map';
 import { Airport, CitySuggestion, CreateTripRequest, PlanPreferences } from '../core/models';
 import { PlanPreferencesEditor, cleanPreferences } from './plan-preferences-editor';
+import { AuthService } from '../core/auth.service';
+import { DraftService } from '../core/draft.service';
 import { PlaceService } from '../core/place.service';
 import { TripService } from '../core/trip.service';
 
@@ -104,7 +106,7 @@ import { TripService } from '../core/trip.service';
             <button class="btn btn-primary self-start" type="submit" [disabled]="loading() || !canSubmit()">
               {{ loading() ? (phase() | translate) : ('create.submit' | translate) }}
             </button>
-            <p class="hint">{{ 'create.hint' | translate }}</p>
+            <p class="hint">{{ (auth.isLoggedIn() ? 'create.hint' : 'create.hint_guest') | translate }}</p>
           </form>
         </div>
 
@@ -165,6 +167,8 @@ export class TripCreate implements AfterViewInit, OnDestroy {
   private trips = inject(TripService);
   private i18n = inject(TranslateService);
   private places = inject(PlaceService);
+  protected auth = inject(AuthService);
+  private drafts = inject(DraftService);
   private router = inject(Router);
   private mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
   private map: google.maps.Map | null = null;
@@ -334,6 +338,23 @@ export class TripCreate implements AfterViewInit, OnDestroy {
       endDate: this.endDate,
       preferences: cleanPreferences(this.prefs()),
     };
+    // Без акаунта нічого не зберігаємо: planner рахує маршрут синхронно,
+    // і він лишається чернеткою в браузері, доки людина не зареєструється.
+    if (!this.auth.isLoggedIn()) {
+      this.phase.set('create.submit_planning');
+      this.trips.preview(req).subscribe({
+        next: (preview) => {
+          this.drafts.save(req, preview);
+          this.router.navigate(['/preview']);
+        },
+        error: () => {
+          this.error.set('create.preview_error');
+          this.loading.set(false);
+        },
+      });
+      return;
+    }
+
     this.trips.create(req).subscribe({
       next: (t) => {
         this.phase.set('create.submit_planning');

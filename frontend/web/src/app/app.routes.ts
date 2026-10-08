@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-import { authGuard, guestOkGuard } from './core/auth.guard';
+import { authGuard } from './core/auth.guard';
 import { AuthService } from './core/auth.service';
 import { Login } from './auth/login';
 import { Register } from './auth/register';
@@ -10,6 +10,7 @@ import { TripEdit } from './trips/trip-edit';
 import { TripDetail } from './trips/trip-detail';
 import { SharedTripView } from './trips/shared-trip';
 import { TripPrint } from './trips/trip-print';
+import { TripPreview } from './trips/trip-preview';
 import { PlaceSearch } from './places/place-search';
 import { PlaceDetail } from './places/place-detail';
 import { Profile } from './profile/profile';
@@ -26,15 +27,15 @@ export const routes: Routes = [
   // Публічні маршрути — БЕЗ authGuard: сюди приходять гості.
   { path: 's/:token', component: SharedTripView },
   { path: 's/:token/print', component: TripPrint },
-  // Каталог місць читається без акаунта: нема чого приховувати, і це
-  // єдина сторінка, яку варто показати до реєстрації.
+  // Каталог місць читається без акаунта: нема чого приховувати.
   { path: 'places', component: PlaceSearch },
   { path: 'places/:id', component: PlaceDetail },
+  // Планування теж відкрите: гість заповнює форму й бачить маршрут, але той
+  // лишається чернеткою в браузері — зберегти його можна лише з акаунтом.
+  { path: 'trips/new', component: TripCreate },
+  { path: 'preview', component: TripPreview },
 
   { path: 'trips', component: TripsList, canActivate: [authGuard] },
-  // Єдина захищена сторінка, відкрита гостю: тут заводиться тимчасовий
-  // акаунт, і далі звичайний authGuard уже пропускає його всюди.
-  { path: 'trips/new', component: TripCreate, canActivate: [guestOkGuard] },
   { path: 'trips/:id/edit', component: TripEdit, canActivate: [authGuard] },
   { path: 'trips/:id/print', component: TripPrint, canActivate: [authGuard] },
   { path: 'trips/:id', component: TripDetail, canActivate: [authGuard] },

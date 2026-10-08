@@ -21,7 +21,11 @@
       </nav>
 
       @if (!auth.isLoggedIn()) {
-        <a class="sb-cta" routerLink="/trips/new">{{ 'nav.plan_trip' | translate }}</a>
+        @if (drafts.hasDraft()) {
+          <a class="sb-cta" routerLink="/preview">{{ 'nav.my_draft' | translate }}</a>
+        } @else {
+          <a class="sb-cta" routerLink="/trips/new">{{ 'nav.plan_trip' | translate }}</a>
+        }
       }
 
       <div class="sb-lang">
@@ -34,18 +38,18 @@
       </div>
 
       <div class="sb-user">
-        @if (auth.isGuest()) {
-          <div class="guest-hint">{{ 'nav.guest_unsaved' | translate }}</div>
-          <a class="sb-signin" routerLink="/register">{{ 'nav.save_account' | translate }}</a>
-          <button class="sb-logout" (click)="logout()">{{ 'nav.discard_guest' | translate }}</button>
-        } @else if (auth.isLoggedIn()) {
+        @if (auth.isLoggedIn()) {
           <a class="user-row" routerLink="/profile" routerLinkActive="on">
             <span class="avatar">TP</span>
             <span class="uname">{{ 'profile.title' | translate }}</span>
           </a>
           <button class="sb-logout" (click)="logout()">{{ 'nav.logout' | translate }}</button>
         } @else {
-          <div class="guest-hint">{{ 'nav.guest_hint' | translate }}</div>
+          @if (drafts.hasDraft()) {
+            <div class="guest-hint">{{ 'nav.draft_unsaved' | translate }}</div>
+          } @else {
+            <div class="guest-hint">{{ 'nav.guest_hint' | translate }}</div>
+          }
           <a class="sb-signin" routerLink="/login">{{ 'nav.sign_in' | translate }}</a>
         }
       </div>

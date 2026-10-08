@@ -35,17 +35,6 @@ public class AuthController {
         return authService.loginWithGoogle(req.idToken());
     }
 
-    /**
-     * Гостьовий вхід без реєстрації — щоб можна було спланувати подорож одразу.
-     * Повертає такі самі токени, як звичайний логін; акаунт позначений як
-     * тимчасовий і перетворюється на справжній через /api/user/claim-guest.
-     */
-    @PostMapping("/guest")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse guest() {
-        return authService.loginAsGuest();
-    }
-
     @PostMapping("/refresh")
     public AuthResponse refresh(@Valid @RequestBody RefreshRequest req) {
         return authService.refresh(req);

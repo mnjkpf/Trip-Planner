@@ -10,11 +10,10 @@
     "logout": "Cerrar sesión",
     "language": "Idioma",
     "plan_trip": "Planear viaje",
-    "guest_unsaved": "Sesión de invitado — tus viajes aún no están vinculados a una cuenta",
-    "save_account": "Guardar con una cuenta",
-    "discard_guest": "Descartar sesión",
     "sign_in": "Iniciar sesión",
-    "guest_hint": "Inicia sesión para planear viajes y guardar lugares"
+    "guest_hint": "Inicia sesión para planear viajes y guardar lugares",
+    "my_draft": "Mi borrador",
+    "draft_unsaved": "Borrador de ruta — aún sin guardar"
   },
   "common": {
     "loading": "Cargando…",
@@ -101,7 +100,9 @@
     "hint": "Tras crear, la ruta se arma automáticamente.",
     "create_error": "No se pudo crear el viaje",
     "map_load_error": "No se pudo cargar el mapa de Google",
-    "trip_to": "Viaje a "
+    "trip_to": "Viaje a ",
+    "hint_guest": "No hace falta cuenta — verás la ruta enseguida. Guardarla requiere una cuenta.",
+    "preview_error": "No se pudo construir la ruta. Inténtalo de nuevo."
   },
   "detail": {
     "map_loading": "Cargando mapa…",
@@ -429,5 +430,22 @@
     "unavailable": "El almacenamiento de fotos no está disponible: inténtalo más tarde",
     "delete_error": "No se pudo eliminar la foto",
     "delete_forbidden": "Solo quien añadió la foto, o el propietario del viaje, puede eliminarla"
+  },
+  "preview": {
+    "create_account": "Crear cuenta para guardar",
+    "day": "Día",
+    "discard": "Descartar borrador",
+    "empty_day": "Nada planeado para este día",
+    "kicker": "Borrador de ruta",
+    "min": " min",
+    "none_body": "Planea un viaje y aparecerá aquí.",
+    "none_title": "Sin borrador",
+    "not_saved": "No guardado en ningún sitio — solo existe en este navegador",
+    "ready_to_save": "Guardar esta ruta en tu cuenta",
+    "replan": "Planear otro",
+    "save": "Guardar viaje",
+    "save_error": "No se pudo guardar. Inténtalo de nuevo.",
+    "saving": "Guardando…",
+    "walk": " min a pie"
   }
 }

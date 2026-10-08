@@ -361,6 +361,8 @@ services:
         condition: service_healthy
       media-service:
         condition: service_healthy
+      planner-service:
+        condition: service_healthy
     environment:
       SPRING_APPLICATION_JSON: '{"management.opentelemetry.enabled":true,"management.tracing.sampling.probability":"1.0","management.opentelemetry.tracing.export.otlp.endpoint":"http://lgtm:4318/v1/traces","management.otlp.metrics.export.url":"http://lgtm:4318/v1/metrics"}'
       OTEL_SDK_DISABLED: "false"
@@ -368,6 +370,7 @@ services:
       SVC_PLACE_URI: http://place-service:8082
       SVC_TRIP_URI: http://trip-service:8083
       SVC_CONTEXT_URI: http://context-service:8084
+      SVC_PLANNER_URI: http://planner-service:8086
       SVC_OFFER_URI: http://offer-service:8087
       SVC_MEDIA_URI: http://media-service:8088
       JWT_JWK_SET_URI: http://user-service:8081/.well-known/jwks.json
