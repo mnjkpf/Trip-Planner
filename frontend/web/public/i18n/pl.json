@@ -8,17 +8,13 @@
     "wishlist": "Lista życzeń",
     "places": "Miejsca",
     "logout": "Wyloguj się",
-<<<<<<< HEAD
     "language": "Język",
     "plan_trip": "Zaplanuj podróż",
     "guest_unsaved": "Sesja gościa — podróże nie są jeszcze powiązane z kontem",
     "save_account": "Zapisz na koncie",
-    "discard_guest": "Odrzuć sesję"
-=======
+    "discard_guest": "Odrzuć sesję",
     "sign_in": "Zaloguj się",
-    "guest_hint": "Zaloguj się, aby planować podróże i zapisywać miejsca",
-    "language": "Język"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
+    "guest_hint": "Zaloguj się, aby planować podróże i zapisywać miejsca"
   },
   "common": {
     "loading": "Ładowanie…",
@@ -57,13 +53,10 @@
     "or": "lub",
     "google_error": "Logowanie przez Google nie powiodło się",
     "google_load_error": "Nie udało się załadować logowania Google",
-<<<<<<< HEAD
     "claim_title": "Zapisz swoje podróże",
     "claim_subtitle": "Załóż konto, a wszystko zaplanowane jako gość zostanie z Tobą",
-    "claim_btn": "Załóż konto i zachowaj podróże"
-=======
+    "claim_btn": "Załóż konto i zachowaj podróże",
     "browse_as_guest": "Przeglądaj miejsca bez konta"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "Moje podróże",

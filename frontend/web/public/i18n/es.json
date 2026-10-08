@@ -8,17 +8,13 @@
     "wishlist": "Lista de deseos",
     "places": "Lugares",
     "logout": "Cerrar sesión",
-<<<<<<< HEAD
     "language": "Idioma",
     "plan_trip": "Planear viaje",
     "guest_unsaved": "Sesión de invitado — tus viajes aún no están vinculados a una cuenta",
     "save_account": "Guardar con una cuenta",
-    "discard_guest": "Descartar sesión"
-=======
+    "discard_guest": "Descartar sesión",
     "sign_in": "Iniciar sesión",
-    "guest_hint": "Inicia sesión para planear viajes y guardar lugares",
-    "language": "Idioma"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
+    "guest_hint": "Inicia sesión para planear viajes y guardar lugares"
   },
   "common": {
     "loading": "Cargando…",
@@ -57,13 +53,10 @@
     "or": "o",
     "google_error": "Inicio con Google falló",
     "google_load_error": "No se pudo cargar el inicio con Google",
-<<<<<<< HEAD
     "claim_title": "Guarda tus viajes",
     "claim_subtitle": "Crea una cuenta y todo lo que planeaste como invitado se queda contigo",
-    "claim_btn": "Crear cuenta y conservar viajes"
-=======
+    "claim_btn": "Crear cuenta y conservar viajes",
     "browse_as_guest": "Explorar lugares sin cuenta"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "Mis viajes",

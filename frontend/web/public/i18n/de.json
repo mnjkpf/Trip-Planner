@@ -8,17 +8,13 @@
     "wishlist": "Wunschliste",
     "places": "Orte",
     "logout": "Abmelden",
-<<<<<<< HEAD
     "language": "Sprache",
     "plan_trip": "Reise planen",
     "guest_unsaved": "Gastsitzung — deine Reisen sind noch keinem Konto zugeordnet",
     "save_account": "Mit Konto sichern",
-    "discard_guest": "Sitzung verwerfen"
-=======
+    "discard_guest": "Sitzung verwerfen",
     "sign_in": "Anmelden",
-    "guest_hint": "Melde dich an, um Reisen zu planen und Orte zu speichern",
-    "language": "Sprache"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
+    "guest_hint": "Melde dich an, um Reisen zu planen und Orte zu speichern"
   },
   "common": {
     "loading": "Lädt…",
@@ -57,13 +53,10 @@
     "or": "oder",
     "google_error": "Google-Anmeldung fehlgeschlagen",
     "google_load_error": "Google-Anmeldung konnte nicht geladen werden",
-<<<<<<< HEAD
     "claim_title": "Reisen sichern",
     "claim_subtitle": "Erstelle ein Konto — alles, was du als Gast geplant hast, bleibt erhalten",
-    "claim_btn": "Konto erstellen und Reisen behalten"
-=======
+    "claim_btn": "Konto erstellen und Reisen behalten",
     "browse_as_guest": "Orte ohne Konto ansehen"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "Meine Reisen",

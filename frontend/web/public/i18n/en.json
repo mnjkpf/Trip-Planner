@@ -8,17 +8,13 @@
     "wishlist": "Wishlist",
     "places": "Places",
     "logout": "Log out",
-<<<<<<< HEAD
     "language": "Language",
     "plan_trip": "Plan a trip",
     "guest_unsaved": "Guest session — your trips are not tied to an account yet",
     "save_account": "Save with an account",
-    "discard_guest": "Discard session"
-=======
+    "discard_guest": "Discard session",
     "sign_in": "Sign in",
-    "guest_hint": "Sign in to plan trips and save places",
-    "language": "Language"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
+    "guest_hint": "Sign in to plan trips and save places"
   },
   "common": {
     "loading": "Loading…",
@@ -57,13 +53,10 @@
     "or": "or",
     "google_error": "Google sign-in failed",
     "google_load_error": "Could not load Google sign-in",
-<<<<<<< HEAD
     "claim_title": "Save your trips",
     "claim_subtitle": "Create an account and everything you planned as a guest stays with you",
-    "claim_btn": "Create account and keep trips"
-=======
+    "claim_btn": "Create account and keep trips",
     "browse_as_guest": "Browse places without an account"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "My trips",

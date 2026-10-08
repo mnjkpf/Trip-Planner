@@ -8,17 +8,13 @@
     "wishlist": "Lista desideri",
     "places": "Luoghi",
     "logout": "Esci",
-<<<<<<< HEAD
     "language": "Lingua",
     "plan_trip": "Pianifica",
     "guest_unsaved": "Sessione ospite — i tuoi viaggi non sono ancora legati a un account",
     "save_account": "Salva con un account",
-    "discard_guest": "Abbandona sessione"
-=======
+    "discard_guest": "Abbandona sessione",
     "sign_in": "Accedi",
-    "guest_hint": "Accedi per pianificare viaggi e salvare luoghi",
-    "language": "Lingua"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
+    "guest_hint": "Accedi per pianificare viaggi e salvare luoghi"
   },
   "common": {
     "loading": "Caricamento…",
@@ -57,13 +53,10 @@
     "or": "o",
     "google_error": "Accesso con Google fallito",
     "google_load_error": "Impossibile caricare accesso Google",
-<<<<<<< HEAD
     "claim_title": "Salva i tuoi viaggi",
     "claim_subtitle": "Crea un account e tutto ciò che hai pianificato da ospite resta con te",
-    "claim_btn": "Crea account e mantieni i viaggi"
-=======
+    "claim_btn": "Crea account e mantieni i viaggi",
     "browse_as_guest": "Esplora i luoghi senza account"
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "I miei viaggi",

@@ -1,11 +1,6 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-<<<<<<< HEAD
-import { inject } from '@angular/core';
 import { authGuard, guestOkGuard } from './core/auth.guard';
-=======
-import { authGuard } from './core/auth.guard';
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
 import { AuthService } from './core/auth.service';
 import { Login } from './auth/login';
 import { Register } from './auth/register';
@@ -43,17 +38,8 @@ export const routes: Routes = [
   { path: 'trips/:id/edit', component: TripEdit, canActivate: [authGuard] },
   { path: 'trips/:id/print', component: TripPrint, canActivate: [authGuard] },
   { path: 'trips/:id', component: TripDetail, canActivate: [authGuard] },
-<<<<<<< HEAD
-  // Каталог місць читається без акаунта: нема чого приховувати, і це
-  // єдина сторінка, яку варто показати до реєстрації.
-  { path: 'places', component: PlaceSearch },
-  { path: 'places/:id', component: PlaceDetail },
-  { path: 'wishlist', component: WishlistList, canActivate: [authGuard] },
-  { path: 'profile', component: Profile, canActivate: [authGuard] },
-=======
   { path: 'wishlist', component: WishlistList, canActivate: [authGuard] },
   { path: 'profile', component: Profile, canActivate: [authGuard] },
 
->>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   { path: '**', redirectTo: home },
 ];
