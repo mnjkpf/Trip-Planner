@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://API_DOMAIN_PLACEHOLDER/api/:path*"
+      "destination": "https://api.waylo.space/api/:path*"
     },
     {
       "source": "/(.*)",
