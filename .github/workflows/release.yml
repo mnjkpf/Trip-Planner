@@ -1,9 +1,9 @@
 name: Release
 
-# Збирає arm64-образи всіх сервісів і кладе в GHCR. Звідти їх тягне сервер.
+# Збирає amd64-образи всіх сервісів і кладе в GHCR. Звідти їх тягне сервер.
 #
 # Чому jar збирається окремо від образу: Java-байткод не залежить від
-# архітектури, тож Maven працює на звичайному x86-ранері, а в arm64-образ
+# архітектури, тож Maven працює на звичайному x86-ранері, а в amd64-образ
 # лише копіюється готовий файл. Жодного RUN під емуляцією — хвилини замість
 # десятків хвилин.
 on:
@@ -79,7 +79,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: image-context
-          platforms: linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
