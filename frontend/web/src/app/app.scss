@@ -63,7 +63,10 @@
   .sb-nav a { border-bottom: 0; border-right: 1px solid var(--divider-soft); }
   .sb-nav a.on { box-shadow: inset 0 -3px 0 var(--accent); }
   .guest-hint { display: none; }
+<<<<<<< HEAD
   .sb-cta { margin: 0 12px; padding: 7px 12px; }
+=======
+>>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   .sb-user { margin: 0; padding: 10px 16px; flex-direction: row; align-items: center; gap: 14px; }
 }
 

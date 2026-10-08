@@ -7,13 +7,18 @@
     "trips": "Mes voyages",
     "wishlist": "Liste de souhaits",
     "places": "Lieux",
-    "journal": "Journal",
     "logout": "Déconnexion",
+<<<<<<< HEAD
     "language": "Langue",
     "plan_trip": "Planifier",
     "guest_unsaved": "Session invité — tes voyages ne sont pas encore liés à un compte",
     "save_account": "Enregistrer avec un compte",
     "discard_guest": "Abandonner la session"
+=======
+    "sign_in": "Se connecter",
+    "guest_hint": "Connecte-toi pour planifier des voyages et enregistrer des lieux",
+    "language": "Langue"
+>>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "common": {
     "loading": "Chargement…",
@@ -52,9 +57,13 @@
     "or": "ou",
     "google_error": "Connexion Google échouée",
     "google_load_error": "Impossible de charger la connexion Google",
+<<<<<<< HEAD
     "claim_title": "Enregistre tes voyages",
     "claim_subtitle": "Crée un compte et tout ce que tu as planifié en invité te suit",
     "claim_btn": "Créer un compte et garder mes voyages"
+=======
+    "browse_as_guest": "Parcourir les lieux sans compte"
+>>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
   },
   "trips": {
     "title": "Mes voyages",

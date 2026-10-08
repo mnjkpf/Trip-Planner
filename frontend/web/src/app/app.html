@@ -20,10 +20,13 @@
         }
       </nav>
 
+<<<<<<< HEAD
       @if (!auth.isLoggedIn()) {
         <a class="sb-cta" routerLink="/trips/new">{{ 'nav.plan_trip' | translate }}</a>
       }
 
+=======
+>>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
       <div class="sb-lang">
         <label class="kicker">{{ 'nav.language' | translate }}</label>
         <select class="lang-select" [value]="lang.current()" (change)="onLangChange($event)">
@@ -34,11 +37,15 @@
       </div>
 
       <div class="sb-user">
+<<<<<<< HEAD
         @if (auth.isGuest()) {
           <div class="guest-hint">{{ 'nav.guest_unsaved' | translate }}</div>
           <a class="sb-signin" routerLink="/register">{{ 'nav.save_account' | translate }}</a>
           <button class="sb-logout" (click)="logout()">{{ 'nav.discard_guest' | translate }}</button>
         } @else if (auth.isLoggedIn()) {
+=======
+        @if (auth.isLoggedIn()) {
+>>>>>>> cfb7641145ba42713c39f5e19b1c6f811f378d3f
           <a class="user-row" routerLink="/profile" routerLinkActive="on">
             <span class="avatar">TP</span>
             <span class="uname">{{ 'profile.title' | translate }}</span>
