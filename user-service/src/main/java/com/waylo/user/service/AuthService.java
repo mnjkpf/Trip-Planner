@@ -13,6 +13,7 @@ import com.waylo.user.error.ApiExceptions.InvalidCredentialsException;
 import com.waylo.user.repository.UserRepository;
 import com.waylo.user.security.GoogleTokenVerifier;
 import com.waylo.user.security.GoogleTokenVerifier.GoogleIdentity;
+import com.waylo.user.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

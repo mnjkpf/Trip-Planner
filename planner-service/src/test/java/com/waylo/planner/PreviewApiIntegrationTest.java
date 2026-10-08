@@ -1,6 +1,5 @@
-package com.waylo.planner.web;
+package com.waylo.planner;
 
-import com.waylo.planner.TestcontainersConfiguration;
 import com.waylo.planner.client.ContextClient;
 import com.waylo.planner.client.DestinationContext;
 import com.waylo.planner.client.PlaceClient;
