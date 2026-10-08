@@ -46,6 +46,7 @@ import { LangService } from '../core/lang.service';
         <p class="foot">{{ 'auth.have_account' | translate }}
           <a routerLink="/login">{{ 'auth.login_link' | translate }}</a>
         </p>
+        <p class="foot"><a routerLink="/places">{{ 'auth.browse_as_guest' | translate }}</a></p>
       </div>
     </div>
   `,

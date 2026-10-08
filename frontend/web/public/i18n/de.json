@@ -7,8 +7,9 @@
     "trips": "Meine Reisen",
     "wishlist": "Wunschliste",
     "places": "Orte",
-    "journal": "Ereignisprotokoll",
     "logout": "Abmelden",
+    "sign_in": "Anmelden",
+    "guest_hint": "Melde dich an, um Reisen zu planen und Orte zu speichern",
     "language": "Sprache"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Registrierung fehlgeschlagen",
     "or": "oder",
     "google_error": "Google-Anmeldung fehlgeschlagen",
-    "google_load_error": "Google-Anmeldung konnte nicht geladen werden"
+    "google_load_error": "Google-Anmeldung konnte nicht geladen werden",
+    "browse_as_guest": "Orte ohne Konto ansehen"
   },
   "trips": {
     "title": "Meine Reisen",

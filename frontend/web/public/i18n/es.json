@@ -7,8 +7,9 @@
     "trips": "Mis viajes",
     "wishlist": "Lista de deseos",
     "places": "Lugares",
-    "journal": "Registro",
     "logout": "Cerrar sesión",
+    "sign_in": "Iniciar sesión",
+    "guest_hint": "Inicia sesión para planear viajes y guardar lugares",
     "language": "Idioma"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Error en el registro",
     "or": "o",
     "google_error": "Inicio con Google falló",
-    "google_load_error": "No se pudo cargar el inicio con Google"
+    "google_load_error": "No se pudo cargar el inicio con Google",
+    "browse_as_guest": "Explorar lugares sin cuenta"
   },
   "trips": {
     "title": "Mis viajes",

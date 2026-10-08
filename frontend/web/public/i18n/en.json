@@ -7,8 +7,9 @@
     "trips": "My trips",
     "wishlist": "Wishlist",
     "places": "Places",
-    "journal": "Event log",
     "logout": "Log out",
+    "sign_in": "Sign in",
+    "guest_hint": "Sign in to plan trips and save places",
     "language": "Language"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Registration failed",
     "or": "or",
     "google_error": "Google sign-in failed",
-    "google_load_error": "Could not load Google sign-in"
+    "google_load_error": "Could not load Google sign-in",
+    "browse_as_guest": "Browse places without an account"
   },
   "trips": {
     "title": "My trips",

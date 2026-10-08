@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
 import { createMap, dotMarker, fit, loadMaps } from '../core/map';
+import { AuthService } from '../core/auth.service';
 import { PlaceService } from '../core/place.service';
 import { WishlistService } from '../core/wishlist.service';
 import { Place } from '../core/models';
@@ -103,6 +104,7 @@ export class PlaceSearch implements AfterViewInit, OnDestroy {
   private places = inject(PlaceService);
   private router = inject(Router);
   protected wishlist = inject(WishlistService);
+  protected auth = inject(AuthService);
   private mapEl = viewChild.required<ElementRef<HTMLDivElement>>('mapEl');
   private map: google.maps.Map | null = null;
   private markers: google.maps.marker.AdvancedMarkerElement[] = [];
@@ -164,6 +166,11 @@ export class PlaceSearch implements AfterViewInit, OnDestroy {
 
   toggleSave(p: Place, ev: Event): void {
     ev.stopPropagation();
+    // Гість не має вішлісту — відправляємо на логін замість 401.
+    if (!this.auth.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
     if (this.wishlist.savedIds().has(p.id)) {
       this.wishlist.remove(p.id).subscribe();
     } else {

@@ -7,8 +7,9 @@
     "trips": "I miei viaggi",
     "wishlist": "Lista desideri",
     "places": "Luoghi",
-    "journal": "Registro",
     "logout": "Esci",
+    "sign_in": "Accedi",
+    "guest_hint": "Accedi per pianificare viaggi e salvare luoghi",
     "language": "Lingua"
   },
   "common": {
@@ -47,7 +48,8 @@
     "register_error": "Registrazione fallita",
     "or": "o",
     "google_error": "Accesso con Google fallito",
-    "google_load_error": "Impossibile caricare accesso Google"
+    "google_load_error": "Impossibile caricare accesso Google",
+    "browse_as_guest": "Esplora i luoghi senza account"
   },
   "trips": {
     "title": "I miei viaggi",
